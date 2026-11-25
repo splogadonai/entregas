@@ -620,6 +620,18 @@ body.sheet-open{overflow:hidden}
 @keyframes armed{to{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 35%,transparent),var(--glow)}}
 @media (prefers-reduced-motion:reduce){.primary.armed{animation:none}}
 .ckrow input[readonly]{opacity:.75}
+
+.cambox{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.cambox video{width:100%;max-height:300px;border-radius:16px;background:#000;object-fit:cover;display:block}
+#cnPrevBox img{border-radius:12px;max-height:120px;width:auto;object-fit:cover}
+
+/* menos peso no celular: pausa o fundo com a folha aberta e sem desfoque de tela inteira */
+body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-state:paused}
+.sheet-back{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(10,6,24,.74)}
+/* modo leve: aparelhos com pouca memória abrem sem animação de fundo nem desfoque */
+.lite .bg-fx .blob{animation:none}
+.lite .bg-fx .edge::after{display:none}
+.lite nav.views,.lite .install-bar,.lite .tip,.lite .panel{-webkit-backdrop-filter:none;backdrop-filter:none}
 </style>
 </head>
 <body>
@@ -1196,8 +1208,16 @@ body.sheet-open{overflow:hidden}
       <div>
         <span class="label">Foto das caixas (opcional)</span>
         <div class="row" style="align-items:center;margin-top:6px">
-          <label class="ghost" style="cursor:pointer">Tirar foto<input type="file" id="cnFoto" accept="image/*" capture="environment" hidden></label>
-          <span id="cnPrevBox" hidden><img id="cnPrev" alt="Foto das caixas entregues" width="120"></span>
+          <button class="ghost" type="button" id="cnCam">Tirar foto</button>
+          <label class="linkbtn" style="cursor:pointer">Escolher da galeria<input type="file" id="cnFoto" accept="image/*" hidden></label>
+        </div>
+        <div class="cambox" id="cnCamBox" hidden>
+          <video id="cnVideo" playsinline muted autoplay></video>
+          <div class="row"><button class="primary sm" type="button" id="cnShot" style="flex:1">Capturar</button><button class="ghost" type="button" id="cnCamOff">Cancelar</button></div>
+        </div>
+        <div class="row" id="cnPrevBox" hidden style="align-items:center;margin-top:8px">
+          <img id="cnPrev" alt="Foto das caixas entregues" width="120">
+          <button class="linkbtn" type="button" id="cnFotoDel">Remover foto</button>
         </div>
       </div>
       <div class="row"><button class="primary" type="submit" id="cnOk" style="flex:1">Confirmar entrega</button><button class="ghost" type="button" id="cnCancel">Cancelar</button></div>
@@ -1220,6 +1240,7 @@ body.sheet-open{overflow:hidden}
   // ---------- qual app: Transporte ou Finanças ----------
   const APP = /\/financas(\/|\/index\.html)?$/.test(location.pathname) ? "fin" : "tr";
   document.body.classList.add("app-" + APP);
+  if (navigator.deviceMemory && navigator.deviceMemory <= 3) document.documentElement.classList.add("lite");   // pouca memória: modo leve
   if (APP === "fin") {
     document.title = "SPLOG · Finanças da família";
     document.querySelector(".login-brand small").textContent = "Finanças da família";
@@ -2895,7 +2916,7 @@ body.sheet-open{overflow:hidden}
     $("cnBack").hidden = !on;
     document.body.classList.toggle("sheet-open", on);
   }
-  function cnClose() { cnShow(false); cn.id = null; }
+  function cnClose() { cnCamStop(); cnShow(false); cn.id = null; }
   function cnPadInit() {
     const cv = $("cnSig"), r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = Math.max(10, Math.round(r.width * dpr)); cv.height = Math.max(10, Math.round(r.height * dpr));
@@ -2926,24 +2947,68 @@ body.sheet-open{overflow:hidden}
     c.fillStyle = "#fff"; c.fillRect(0, 0, 360, 120); c.drawImage(cv, (360 - w) / 2, (120 - h) / 2, w, h);
     return out.toDataURL("image/png");
   }
-  $("cnFoto").onchange = ev => {
+  // ---------- foto leve ----------
+  // A câmera abre dentro da página (sem trocar de app, que faz o Chrome ser fechado em celulares com pouca memória)
+  // e a imagem nunca é carregada inteira: o quadro já sai pequeno.
+  const FOTO_LADO = 720, FOTO_MAX = 140000;
+  function cnSetFoto(src, w0, h0) {
+    const k = Math.min(1, FOTO_LADO / Math.max(w0, h0)), w = Math.max(1, Math.round(w0 * k)), h = Math.max(1, Math.round(h0 * k));
+    const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(src, 0, 0, w, h);
+    let q = 0.6, d = c.toDataURL("image/jpeg", q);
+    while (d.length > FOTO_MAX && q > 0.3) { q -= 0.1; d = c.toDataURL("image/jpeg", q); }   // o registro tem limite de tamanho
+    c.width = c.height = 0;                                                                   // libera a memória do canvas
+    cn.foto = d; cn.fotoW = w; cn.fotoH = h; $("cnPrev").src = d; $("cnPrevBox").hidden = false;
+  }
+  let camStream = null;
+  function cnCamStop() {
+    if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }   // desliga a câmera
+    const v = $("cnVideo"); v.pause?.(); v.srcObject = null; $("cnCamBox").hidden = true;
+  }
+  async function cnCamStart() {
+    setStatus("cnStatus", "");
+    if (!navigator.mediaDevices?.getUserMedia) { setStatus("cnStatus", "A câmera não está disponível aqui. Use “Escolher da galeria”.", true); return; }
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+      const v = $("cnVideo"); v.srcObject = camStream; $("cnCamBox").hidden = false;
+      await v.play().catch(() => {});
+    } catch (e) {
+      cnCamStop();
+      setStatus("cnStatus", e && e.name === "NotAllowedError" ? "A câmera foi bloqueada. Libere nas permissões do site ou use “Escolher da galeria”." : "Não foi possível abrir a câmera. Use “Escolher da galeria”.", true);
+    }
+  }
+  $("cnCam").onclick = cnCamStart;
+  $("cnCamOff").onclick = cnCamStop;
+  $("cnShot").onclick = () => {
+    const v = $("cnVideo");
+    if (!v.videoWidth) return;
+    cnSetFoto(v, v.videoWidth, v.videoHeight);
+    cnCamStop();
+  };
+  $("cnFotoDel").onclick = () => { cn.foto = null; cn.fotoW = cn.fotoH = 0; $("cnPrev").removeAttribute("src"); $("cnPrevBox").hidden = true; };
+  $("cnFoto").onchange = async ev => {
     const f = ev.target.files[0]; ev.target.value = "";
     if (!f) return;
-    const img = new Image(), url = URL.createObjectURL(f);
-    img.onload = () => {
-      const k = Math.min(1, 720 / Math.max(img.width, img.height)), w = Math.round(img.width * k), h = Math.round(img.height * k);
-      const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
-      let q = 0.6, d = c.toDataURL("image/jpeg", q);
-      while (d.length > 140000 && q > 0.3) { q -= 0.1; d = c.toDataURL("image/jpeg", q); }   // foto leve: o registro tem limite de tamanho
-      URL.revokeObjectURL(url);
-      cn.foto = d; cn.fotoW = w; cn.fotoH = h; $("cnPrev").src = d; $("cnPrevBox").hidden = false;
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); setStatus("cnStatus", "Não foi possível ler a foto.", true); };
-    img.src = url;
+    setStatus("cnStatus", "Preparando a foto…");
+    try {
+      if (window.createImageBitmap) {
+        // decodifica já reduzida (largura 640): evita abrir uma foto de 12 megapixels ou mais na memória
+        const bmp = await createImageBitmap(f, { resizeWidth: 640, resizeQuality: "medium" });
+        cnSetFoto(bmp, bmp.width, bmp.height); bmp.close?.();
+      } else {
+        const url = URL.createObjectURL(f), img = new Image();
+        await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = url; });
+        cnSetFoto(img, img.naturalWidth, img.naturalHeight); URL.revokeObjectURL(url);
+      }
+      setStatus("cnStatus", "");
+    } catch { setStatus("cnStatus", "Não foi possível ler a foto. Tente outra ou tire pela câmera.", true); }
   };
+  // a câmera não fica ligada se a folha fecha ou a aba vai para o fundo
+  document.addEventListener("visibilitychange", () => { if (document.hidden) cnCamStop(); });
+  window.addEventListener("pagehide", cnCamStop);
   function cnOpen(id) {
     const it = ckItens().find(x => x.id === id);
     if (!it) return;
+    cnCamStop();
     Object.assign(cn, { id, foto: null, fotoW: 0, fotoH: 0 });
     $("cnTitle").textContent = "Canhoto de entrega";
     $("cnWho").innerHTML = ""; $("cnWho").append(el("b", {}, it.nome), ` · ${ckNome(state.ck.perfil)} · pedido: ${it.marmitas || 0} ${(it.marmitas || 0) === 1 ? "marmita" : "marmitas"}`);
