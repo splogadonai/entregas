@@ -609,6 +609,17 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
 #cnView{display:flex;flex-direction:column;gap:12px}
 #cnView .lrow .t span:first-child{color:var(--muted);font-size:13px}
 body.sheet-open{overflow:hidden}
+
+/* iniciar / finalizar entrega (Checklist) */
+.trip{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:var(--sunk)}
+.trip-times{display:flex;gap:8px;flex-wrap:wrap;min-height:26px}
+.trip .primary{min-height:46px;padding:10px 14px;font-size:16px}
+.primary.fin{background:linear-gradient(125deg,#15803d,#16a34a 55%,#22c55e);box-shadow:0 14px 30px -12px rgba(22,163,74,.55)}
+.primary.fin:hover:not(:disabled){box-shadow:0 18px 40px -12px rgba(34,197,94,.55)}
+.primary.armed{animation:armed 1s ease-in-out infinite alternate}
+@keyframes armed{to{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 35%,transparent),var(--glow)}}
+@media (prefers-reduced-motion:reduce){.primary.armed{animation:none}}
+.ckrow input[readonly]{opacity:.75}
 </style>
 </head>
 <body>
@@ -858,6 +869,14 @@ body.sheet-open{overflow:hidden}
       <div class="ckhead" aria-hidden="true"><span></span><span>Conf.</span><span>Entr.</span><span>Nome</span><span>Marmitas</span><span></span></div>
       <div id="ckRows"></div>
       <button class="ghost" type="button" id="ckAdd" style="align-self:flex-start">+ Adicionar nome</button>
+      <div class="trip" id="ckTrip">
+        <div class="trip-times" id="ckTripTimes"></div>
+        <div class="row">
+          <button class="primary" type="button" id="ckStart" style="flex:1" disabled>Iniciar entrega</button>
+          <button class="primary fin" type="button" id="ckFinish" style="flex:1" disabled>Finalizar entrega</button>
+        </div>
+        <small class="muted" id="ckTripHint"></small>
+      </div>
       <div class="totals" style="flex-direction:column;align-items:flex-start;gap:4px">
         <span class="num" id="ckSum">0 marmitas</span>
         <span class="muted" id="ckProg">0/0 entregues</span>
@@ -2493,7 +2512,7 @@ body.sheet-open{overflow:hidden}
 
   // ================= CHECKLIST DE ENTREGAS PERSONALIZADAS =================
   const CK_DEFAULT = [{ id: "paje", nome: "Pajé" }, { id: "outros", nome: "Outros" }];
-  Object.assign(state, { ck: { day: todayIso(), perfil: "paje", perfis: CK_DEFAULT, docs: {}, dirty: {}, timer: null, unsub: null, unsub2: null, srv: {}, loaded: false } });
+  Object.assign(state, { ck: { day: todayIso(), perfil: "paje", perfis: CK_DEFAULT, docs: {}, dirty: {}, timer: null, unsub: null, unsub2: null, srv: {}, meta: {}, confirm: null, loaded: false } });
   const ckId = (day, perfil) => `${day}__${perfil}`;
   const rid = () => Math.random().toString(36).slice(2, 9);
   const slugOf = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "perfil";
@@ -2520,7 +2539,7 @@ body.sheet-open{overflow:hidden}
     const writes = pend.map(p => [ckId(day, p), { data: day, perfil: p, itens: (ck.docs[p] || []).map(ckClean), atualizadoEm: new Date().toISOString() }]);
     pend.forEach(p => ck.dirty[p] = false);
     try {
-      for (const [id, body] of writes) await state.db.collection("checklist").doc(id).set(body);
+      for (const [id, body] of writes) await state.db.collection("checklist").doc(id).set(body, { merge: true });
     } catch {
       pend.forEach(p => ck.dirty[p] = true);
       setStatus("ckStatus", "Não foi possível salvar. Verifique a conexão.", true);
@@ -2531,7 +2550,7 @@ body.sheet-open{overflow:hidden}
     if (d === state.ck.day) return;
     ckSave();                       // grava o que estava pendente no dia que está saindo
     state.ck.unsub?.(); state.ck.unsub2?.();
-    Object.assign(state.ck, { day: d, docs: {}, dirty: {}, loaded: false, lastIncoming: null, srv: {} });
+    Object.assign(state.ck, { day: d, docs: {}, dirty: {}, loaded: false, lastIncoming: null, srv: {}, meta: {}, confirm: null });
     clearTimeout(state.ck.timer);
     subCk(); renderAll();
   }
@@ -2549,8 +2568,12 @@ body.sheet-open{overflow:hidden}
     const day = state.ck.day;
     state.ck.unsub = state.db.collection("checklist").where("data", "==", day).onSnapshot(s => {
       if (day !== state.ck.day) return;
-      const incoming = {};
-      s.docs.forEach(d => { const x = d.data(); if (x.perfil) incoming[x.perfil] = x.itens || []; });
+      const incoming = {}, meta = {};
+      s.docs.forEach(d => { const x = d.data(); if (x.perfil) {
+        incoming[x.perfil] = x.itens || [];
+        meta[x.perfil] = { inicio: x.inicio || "", fim: x.fim || "", inicioSrv: toIso(x.inicioSrv), fimSrv: toIso(x.fimSrv) };
+      } });
+      state.ck.meta = meta;
       state.ck.lastIncoming = incoming; state.ck.loaded = true;
       ckApply();
     }, () => { state.ck.loaded = true; setStatus("ckStatus", "Não foi possível carregar a lista.", true); });
@@ -2568,18 +2591,79 @@ body.sheet-open{overflow:hidden}
     const conf = it.filter(x => x.conferida).length, ent = it.filter(x => x.entregue).length;
     $("ckSum").textContent = `${tot} ${tot === 1 ? "marmita" : "marmitas"} · ${conf}/${it.length} conferidas`;
     $("ckProg").textContent = `${ent}/${it.length} entregues`;
+    ckTrip();
   }
+  // ---------- iniciar / finalizar entrega ----------
+  const ckMeta = () => state.ck.meta[state.ck.perfil] || {};
+  const ckIni = () => { const m = ckMeta(); return m.inicioSrv || m.inicio || ""; };
+  const ckFim = () => { const m = ckMeta(); return m.fimSrv || m.fim || ""; };
+  const ckTravada = () => !!ckFim();             // depois de finalizar, a lista não muda mais
+  function fmtDur(ms) {
+    const min = Math.round(ms / 60000);
+    if (min < 1) return "menos de 1 min";
+    return min < 60 ? `${min} min` : `${Math.floor(min / 60)}h ${pad(min % 60)}min`;
+  }
+  const ckDur = () => { const a = ckIni(), b = ckFim(); return a && b ? fmtDur(new Date(b) - new Date(a)) : ""; };
+  function ckTrip() {
+    const ck = state.ck, ini = ckIni(), fim = ckFim(), it = ckItens().filter(x => x.nome.trim());
+    const faltaConf = it.filter(x => !x.conferida).length, faltaEnt = it.filter(x => !x.entregue).length;
+    const podeIniciar = ck.loaded && !ini && it.length > 0 && faltaConf === 0;
+    const podeFinalizar = ck.loaded && !!ini && !fim && it.length > 0 && faltaEnt === 0;
+    const bs = $("ckStart"), bf = $("ckFinish");
+    bs.disabled = !podeIniciar; bf.disabled = !podeFinalizar;
+    bs.classList.toggle("armed", ck.confirm === "inicio" && podeIniciar);
+    bf.classList.toggle("armed", ck.confirm === "fim" && podeFinalizar);
+    bs.textContent = ini ? `Iniciada às ${hhmm(ini)}` : ck.confirm === "inicio" && podeIniciar ? "Toque de novo para iniciar" : "Iniciar entrega";
+    bf.textContent = fim ? `Finalizada às ${hhmm(fim)}` : ck.confirm === "fim" && podeFinalizar ? "Toque de novo para finalizar" : "Finalizar entrega";
+    const t = $("ckTripTimes"); t.textContent = "";
+    if (ini) t.append(el("span", { class: "pill rel" }, `Início ${hhmm(ini)}`));
+    if (fim) t.append(el("span", { class: "pill ok" }, `Fim ${hhmm(fim)}`), el("span", { class: "pill" }, `Duração ${ckDur()}`));
+    else if (ini) t.append(el("span", { class: "pill warn" }, "Em andamento"));
+    let hint;
+    if (!ck.loaded) hint = "";
+    else if (fim) hint = "Entrega concluída. A lista ficou travada para preservar o registro.";
+    else if (ini) hint = faltaEnt ? `Faltam ${faltaEnt} ${faltaEnt === 1 ? "entrega" : "entregas"} para finalizar.` : "Tudo entregue. Pode finalizar a entrega.";
+    else if (!it.length) hint = "Adicione os nomes para poder iniciar.";
+    else hint = faltaConf ? `Faltam ${faltaConf} ${faltaConf === 1 ? "nome" : "nomes"} para conferir antes de iniciar. A marcação Entr. só libera depois de iniciar.` : "Tudo conferido. Pode iniciar a entrega.";
+    $("ckTripHint").textContent = hint;
+    // travada depois de finalizar
+    $("ckAdd").disabled = ckTravada(); $("ckCopy").disabled = ckTravada();
+  }
+  // um toque arma o botão por 4 segundos; o segundo toque confirma (o horário não pode ser desfeito)
+  async function ckTripAcao(tipo) {
+    const ck = state.ck, ini = ckIni(), fim = ckFim(), it = ckItens().filter(x => x.nome.trim());
+    const ok = tipo === "inicio" ? !ini && it.length > 0 && it.every(x => x.conferida) : !!ini && !fim && it.length > 0 && it.every(x => x.entregue);
+    if (!ok || !state.db) return;
+    if (ck.confirm !== tipo) {
+      ck.confirm = tipo; ckTrip();
+      setTimeout(() => { if (ck.confirm === tipo) { ck.confirm = null; ckTrip(); } }, 4000);
+      return;
+    }
+    ck.confirm = null;
+    const perfil = ck.perfil, day = ck.day, agora = new Date().toISOString();
+    const srv = window.firebase?.firestore?.FieldValue?.serverTimestamp?.() ?? agora;
+    const campos = tipo === "inicio" ? { inicio: agora, inicioSrv: srv } : { fim: agora, fimSrv: srv };
+    try {
+      await ckSave();                                                // garante que a lista está salva antes
+      await state.db.collection("checklist").doc(ckId(day, perfil)).set({ data: day, perfil, ...campos }, { merge: true });
+      ck.meta[perfil] = { ...(ck.meta[perfil] || {}), ...(tipo === "inicio" ? { inicio: agora } : { fim: agora }) };
+      setStatus("ckStatus", tipo === "inicio" ? `Entrega iniciada às ${hhmm(agora)}.` : `Entrega finalizada às ${hhmm(agora)}.`);
+      renderCk();
+    } catch { ckTrip(); setStatus("ckStatus", "Não foi possível registrar o horário. Verifique a conexão e tente de novo.", true); }
+  }
+  $("ckStart").onclick = () => ckTripAcao("inicio");
+  $("ckFinish").onclick = () => ckTripAcao("fim");
   // move um nome de posição e salva a nova ordem
   function ckMove(from, to) {
     const arr = [...ckItens()];
-    if (from === to || to < 0 || to >= arr.length) return;
+    if (ckTravada() || from === to || to < 0 || to >= arr.length) return;
     const [x] = arr.splice(from, 1); arr.splice(to, 0, x);
     state.ck.docs[state.ck.perfil] = arr;
     ckChange(true);
   }
   // arrastar pela alça (dedo ou mouse): a linha segue o ponteiro e as outras abrem espaço
   function ckDragStart(e, rowEl, grip) {
-    if (e.button !== undefined && e.button !== 0) return;
+    if (ckTravada() || (e.button !== undefined && e.button !== 0)) return;
     e.preventDefault();
     const rows = [...$("ckRows").querySelectorAll(".ckrow")], from = rows.indexOf(rowEl);
     if (from < 0 || rows.length < 2) return;
@@ -2635,7 +2719,9 @@ body.sheet-open{overflow:hidden}
       it.conferida = true; ckChange(true); renderCk();
     };
     const ent = el("input", { type: "checkbox", "aria-label": it.entregue ? "Entregue (já marcada)" : "Entregue" });
-    ent.checked = !!it.entregue; ent.disabled = !it.conferida || !!it.entregue;
+    const iniciada = !!ckIni();
+    ent.checked = !!it.entregue; ent.disabled = !it.conferida || !!it.entregue || !iniciada;
+    if (!iniciada && it.conferida && !it.entregue) ent.title = "Inicie a entrega para marcar como entregue";
     ent.onchange = () => {
       if (!ent.checked) { ent.checked = true; return; }
       // com canhoto exigido, a entrega só vale depois da assinatura de quem recebeu
@@ -2676,6 +2762,7 @@ body.sheet-open{overflow:hidden}
     fillSub();
     // depois do canhoto, o registro trava: nome, quantidade e remoção
     if (it.comprovante) { nome.readOnly = true; marm.readOnly = true; del.disabled = true; del.title = "Entrega com canhoto não pode ser removida"; }
+    if (ckTravada()) { nome.readOnly = true; marm.readOnly = true; del.disabled = true; grip.disabled = true; del.title = "Entrega finalizada: lista travada"; }
     const row = el("div", { class: "ckrow" + (it.entregue ? " done" : "") }, grip, conf, ent, nome, marm, del, sub);
     grip.addEventListener("pointerdown", e => ckDragStart(e, row, grip));
     return row;
@@ -2703,11 +2790,13 @@ body.sheet-open{overflow:hidden}
   $("ckNext").onclick = () => setCkDay(addDays(state.ck.day, 1));
   $("ckDate").onchange = e => e.target.value && setCkDay(e.target.value);
   $("ckAdd").onclick = () => {
+    if (ckTravada()) return;
     state.ck.docs[state.ck.perfil] = [...ckItens(), { id: rid(), nome: "", marmitas: 0, conferida: false, entregue: false }];
     ckChange(true); renderCk();
     $("ckRows").lastElementChild?.querySelector("input[type=text]")?.focus();
   };
   $("ckCopy").onclick = async () => {
+    if (ckTravada()) return;
     const prev = addDays(state.ck.day, -1), p = state.ck.perfil;
     try {
       const s = await state.db.collection("checklist").doc(ckId(prev, p)).get();
@@ -2752,7 +2841,11 @@ body.sheet-open{overflow:hidden}
     pdf.setFont("helvetica", "bold"); pdf.setFontSize(16); pdf.text(`Entregas · ${nome}`, L, y); y += 8;
     pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(90);
     pdf.text(`Data: ${fmtDate(day)} (${DOWL[parse(day).getDay()]})`, L, y); y += 5;
-    pdf.text(`Emitido em ${fmtDate(todayIso())}`, L, y); y += 9; pdf.setTextColor(0);
+    pdf.text(`Emitido em ${fmtDate(todayIso())}`, L, y); y += 5;
+    if (ckIni()) {
+      pdf.text(`Início: ${hhmm(ckIni())}${ckFim() ? `  ·  Fim: ${hhmm(ckFim())}  ·  Duração: ${ckDur()}` : "  ·  entrega em andamento"}`, L, y); y += 5;
+    }
+    y += 4; pdf.setTextColor(0);
     const cols = [["Nome", L + 2, "l"], ["Marmitas", L + 112, "c"], ["Conferida", L + 138, "c"], ["Entregue", L + 164, "c"]];
     const header = () => {
       pdf.setFillColor(232, 238, 234); pdf.rect(L, y - 4.5, W, 7, "F");
@@ -2786,8 +2879,8 @@ body.sheet-open{overflow:hidden}
     const linhas = ckLinhas();
     if (!linhas.length) { setStatus("ckStatus", "Adicione nomes antes de baixar a planilha.", true); return; }
     const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const rows = [["Data", "Perfil", "Nome", "Marmitas", "Conferida", "Entregue", "Recebido por", "Qtd conferida", "Hora da confirmação", "Divergência"]];
-    linhas.forEach(r => rows.push([fmtDate(state.ck.day), ckNome(state.ck.perfil), r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[4] ? (r[7] ? "Sim" : "Não") : ""]));
+    const rows = [["Data", "Perfil", "Nome", "Marmitas", "Conferida", "Entregue", "Recebido por", "Qtd conferida", "Hora da confirmação", "Divergência", "Início da entrega", "Fim da entrega", "Duração"]];
+    linhas.forEach(r => rows.push([fmtDate(state.ck.day), ckNome(state.ck.perfil), r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[4] ? (r[7] ? "Sim" : "Não") : "", ckIni() ? hhmm(ckIni()) : "", ckFim() ? hhmm(ckFim()) : "", ckDur()]));
     ckDownload(`entregas-${slugOf(ckNome(state.ck.perfil))}-${state.ck.day}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n"), "text/csv;charset=utf-8");
   };
 
