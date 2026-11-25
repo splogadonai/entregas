@@ -584,6 +584,30 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
 .ckrow input[type=checkbox]:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:2px}
 .ckrow input[type=checkbox]:disabled{cursor:default}
 .ckrow input[type=checkbox]:disabled:not(:checked){opacity:.35}
+
+/* canhoto digital (Checklist) */
+.cksub{grid-column:2 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;font-size:12.5px;line-height:1.35;color:var(--muted);margin-top:-2px}
+.cksub .t{min-width:0;overflow-wrap:anywhere}
+.cksub.ok{color:var(--ok)}
+.cksub.div{color:var(--danger);font-weight:500}
+.cksub.need{color:var(--warn)}
+.cksub .linkbtn{font-size:12.5px;padding:2px 0;font-weight:500}
+.ckrow input[readonly]{opacity:.75}
+.ckrow .x:disabled{opacity:.3;cursor:default}
+.sheet-back{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,6,24,.58);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.sheet{width:100%;max-width:560px;max-height:94vh;overflow:auto;overscroll-behavior:contain;background:var(--surface);border-radius:26px 26px 0 0;
+  padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:0 -24px 60px -24px rgba(124,58,237,.55)}
+@media (min-width:700px){.sheet-back{align-items:center}.sheet{border-radius:26px;padding-bottom:22px}}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sheet-head .x{border:none;background:var(--fill);color:var(--muted);font-size:20px;width:34px;height:34px;border-radius:50%;line-height:1;flex:none}
+.cn-who{font-size:15px;color:var(--muted)}
+.cn-who b{color:var(--fg);font-weight:600}
+.sigpad{width:100%;height:150px;display:block;background:#fff;border-radius:16px;border:1.5px dashed var(--line);touch-action:none;cursor:crosshair}
+.sigrow{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+#cnPrevBox img,#cnView img{max-width:100%;max-height:220px;border-radius:12px;display:block;background:#fff}
+#cnView{display:flex;flex-direction:column;gap:12px}
+#cnView .lrow .t span:first-child{color:var(--muted);font-size:13px}
+body.sheet-open{overflow:hidden}
 </style>
 </head>
 <body>
@@ -843,7 +867,7 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
       </div>
       <div class="status" id="ckStatus" role="status"></div>
     </section>
-    <small class="muted" style="text-align:center">Arraste pela alça <b>⋮⋮</b> para mudar a ordem. Marque <b>Conf.</b> quando conferir e <b>Entr.</b> quando entregar: depois de marcadas, as caixas não desmarcam.</small>
+    <small class="muted" style="text-align:center">Arraste pela alça <b>⋮⋮</b> para mudar a ordem. Marque <b>Conf.</b> quando conferir e <b>Entr.</b> quando entregar: depois de marcadas, as caixas não desmarcam. Nos nomes com <b>✍ canhoto</b> (como a Habix), <b>Entr.</b> abre a assinatura de quem recebeu.</small>
   </section>
 
   <!-- ===================== CUSTOS ===================== -->
@@ -1134,6 +1158,38 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
   </section>
 </div>
 
+<div class="sheet-back" id="cnBack" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cnTitle">
+    <div class="sheet-head"><h2 id="cnTitle">Canhoto de entrega</h2><button class="x" id="cnClose" type="button" aria-label="Fechar">×</button></div>
+    <form id="cnForm" class="wrap" style="gap:14px">
+      <div class="cn-who" id="cnWho"></div>
+      <div class="row">
+        <label class="field"><span class="label">Quantidade conferida</span><input type="number" id="cnQtd" min="0" inputmode="numeric" placeholder="0"></label>
+        <label class="field"><span class="label">Quem recebeu</span><input type="text" id="cnRec" placeholder="Nome de quem recebeu" autocomplete="off"></label>
+      </div>
+      <div class="notice" id="cnWarn" hidden></div>
+      <div>
+        <span class="label">Assinatura de quem recebeu</span>
+        <canvas id="cnSig" class="sigpad" aria-label="Área para assinar com o dedo ou o mouse"></canvas>
+        <div class="sigrow"><small class="muted">Peça para assinar aqui com o dedo.</small><button class="linkbtn" type="button" id="cnClear">Limpar</button></div>
+      </div>
+      <div>
+        <span class="label">Foto das caixas (opcional)</span>
+        <div class="row" style="align-items:center;margin-top:6px">
+          <label class="ghost" style="cursor:pointer">Tirar foto<input type="file" id="cnFoto" accept="image/*" capture="environment" hidden></label>
+          <span id="cnPrevBox" hidden><img id="cnPrev" alt="Foto das caixas entregues" width="120"></span>
+        </div>
+      </div>
+      <div class="row"><button class="primary" type="submit" id="cnOk" style="flex:1">Confirmar entrega</button><button class="ghost" type="button" id="cnCancel">Cancelar</button></div>
+      <div class="status" id="cnStatus" role="status"></div>
+    </form>
+    <div id="cnView" hidden>
+      <div class="ledger" id="cnViewBody"></div>
+      <button class="primary" type="button" id="cnPdf">Baixar comprovante (PDF)</button>
+      <div class="status" id="cnViewStatus" role="status"></div>
+    </div>
+  </div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -2436,13 +2492,19 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
 
   // ================= CHECKLIST DE ENTREGAS PERSONALIZADAS =================
   const CK_DEFAULT = [{ id: "paje", nome: "Pajé" }, { id: "outros", nome: "Outros" }];
-  Object.assign(state, { ck: { day: todayIso(), perfil: "paje", perfis: CK_DEFAULT, docs: {}, dirty: {}, timer: null, unsub: null, loaded: false } });
+  Object.assign(state, { ck: { day: todayIso(), perfil: "paje", perfis: CK_DEFAULT, docs: {}, dirty: {}, timer: null, unsub: null, unsub2: null, srv: {}, loaded: false } });
   const ckId = (day, perfil) => `${day}__${perfil}`;
   const rid = () => Math.random().toString(36).slice(2, 9);
   const slugOf = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "perfil";
   const ckItens = () => state.ck.docs[state.ck.perfil] || [];
   const ckNome = id => (state.ck.perfis.find(p => p.id === id) || {}).nome || "Perfil";
-  const ckClean = it => ({ id: it.id, nome: String(it.nome || ""), marmitas: Number(it.marmitas) || 0, conferida: !!it.conferida, entregue: !!it.entregue });
+  const ckClean = it => {
+    const o = { id: it.id, nome: String(it.nome || ""), marmitas: Number(it.marmitas) || 0, conferida: !!it.conferida, entregue: !!it.entregue };
+    if (it.canhoto !== undefined) o.canhoto = !!it.canhoto;
+    if (it.comprovante) o.comprovante = { id: String(it.comprovante.id), recebedor: String(it.comprovante.recebedor || ""), quantidade: Number(it.comprovante.quantidade) || 0,
+      em: String(it.comprovante.em || ""), divergencia: !!it.comprovante.divergencia };
+    return o;
+  };
 
   // Guarda as mudanças do perfil atual; "now" grava logo, senão espera a pessoa parar de digitar.
   function ckChange(now) {
@@ -2467,8 +2529,8 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
   function setCkDay(d) {
     if (d === state.ck.day) return;
     ckSave();                       // grava o que estava pendente no dia que está saindo
-    state.ck.unsub?.();
-    Object.assign(state.ck, { day: d, docs: {}, dirty: {}, loaded: false, lastIncoming: null });
+    state.ck.unsub?.(); state.ck.unsub2?.();
+    Object.assign(state.ck, { day: d, docs: {}, dirty: {}, loaded: false, lastIncoming: null, srv: {} });
     clearTimeout(state.ck.timer);
     subCk(); renderAll();
   }
@@ -2491,6 +2553,12 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
       state.ck.lastIncoming = incoming; state.ck.loaded = true;
       ckApply();
     }, () => { state.ck.loaded = true; setStatus("ckStatus", "Não foi possível carregar a lista.", true); });
+    // horário que o servidor registrou em cada canhoto do dia (vale mais do que o relógio do celular)
+    state.ck.unsub2 = state.db.collection("comprovantes").where("data", "==", day).onSnapshot(s => {
+      if (day !== state.ck.day) return;
+      const m = {}; s.docs.forEach(d => { m[d.id] = toIso(d.data().servidor); });
+      state.ck.srv = m; renderAll();
+    }, () => {});
   }
   $("ckRows").addEventListener("focusout", () => setTimeout(ckApply, 0));
 
@@ -2569,11 +2637,16 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
     ent.checked = !!it.entregue; ent.disabled = !it.conferida || !!it.entregue;
     ent.onchange = () => {
       if (!ent.checked) { ent.checked = true; return; }
+      // com canhoto exigido, a entrega só vale depois da assinatura de quem recebeu
+      if (it.canhoto && !it.comprovante) { ent.checked = false; cnOpen(it.id); return; }
       it.entregue = true; ckChange(true); renderCk();
     };
     const nome = el("input", { type: "text", value: it.nome, placeholder: "Nome", "aria-label": "Nome", autocomplete: "off" });
     nome.oninput = () => { it.nome = nome.value; ckChange(false); ckTotals(); };
-    nome.onblur = () => ckChange(true);
+    nome.onblur = () => {
+      if (it.canhoto === undefined && CN_RE.test(it.nome)) { it.canhoto = true; fillSub(); }
+      ckChange(true);
+    };
     const marm = el("input", { type: "number", min: "0", inputmode: "numeric", placeholder: "0", "aria-label": "Marmitas" });
     marm.value = it.marmitas || "";
     marm.oninput = () => { it.marmitas = Math.max(0, parseInt(marm.value, 10) || 0); ckChange(false); ckTotals(); };
@@ -2581,7 +2654,28 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
     const del = el("button", { type: "button", class: "x", "aria-label": `Remover ${it.nome || "nome"}`, onclick: () => {
       state.ck.docs[state.ck.perfil] = ckItens().filter(x => x !== it); ckChange(true); renderCk();
     } }, "×");
-    const row = el("div", { class: "ckrow" + (it.entregue ? " done" : "") }, grip, conf, ent, nome, marm, del);
+    // linha de baixo: canhoto (exigir, aguardando ou confirmado)
+    const sub = el("div", { class: "cksub" });
+    const fillSub = () => {
+      sub.textContent = ""; sub.className = "cksub";
+      const c = it.comprovante;
+      if (c) {
+        sub.classList.add(c.divergencia ? "div" : "ok");
+        sub.append(el("span", { class: "t" }, `${c.divergencia ? "⚠ Divergente" : "✓ Canhoto"} · recebido por ${c.recebedor} às ${ckHora(c)} · conferiu ${c.quantidade}${c.divergencia ? ` (pedido: ${it.marmitas || 0})` : ""}`),
+          el("button", { type: "button", class: "linkbtn", onclick: () => cnView(c.id) }, "Ver comprovante"));
+      } else if (it.canhoto) {
+        sub.classList.add("need");
+        sub.append(el("span", { class: "t" }, it.entregue ? "✍ Entregue sem canhoto" : "✍ Canhoto: toque em Entr. para colher a assinatura"),
+          it.entregue ? el("button", { type: "button", class: "linkbtn", onclick: () => cnOpen(it.id) }, "Colher canhoto agora")
+            : el("button", { type: "button", class: "linkbtn", onclick: () => { it.canhoto = false; ckChange(true); fillSub(); } }, "Remover"));
+      } else {
+        sub.append(el("button", { type: "button", class: "linkbtn", onclick: () => { it.canhoto = true; ckChange(true); fillSub(); } }, "+ Exigir canhoto"));
+      }
+    };
+    fillSub();
+    // depois do canhoto, o registro trava: nome, quantidade e remoção
+    if (it.comprovante) { nome.readOnly = true; marm.readOnly = true; del.disabled = true; del.title = "Entrega com canhoto não pode ser removida"; }
+    const row = el("div", { class: "ckrow" + (it.entregue ? " done" : "") }, grip, conf, ent, nome, marm, del, sub);
     grip.addEventListener("pointerdown", e => ckDragStart(e, row, grip));
     return row;
   }
@@ -2617,7 +2711,8 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
     try {
       const s = await state.db.collection("checklist").doc(ckId(prev, p)).get();
       if (!s.exists) { setStatus("ckStatus", `Não há lista de ${fmtDate(prev)} para copiar.`, true); return; }
-      state.ck.docs[p] = (s.data().itens || []).map(it => ({ id: rid(), nome: it.nome, marmitas: it.marmitas || 0, conferida: false, entregue: false }));
+      state.ck.docs[p] = (s.data().itens || []).map(it => ({ id: rid(), nome: it.nome, marmitas: it.marmitas || 0, conferida: false, entregue: false,
+        canhoto: it.canhoto !== undefined ? it.canhoto : (CN_RE.test(it.nome) ? true : undefined) }));
       ckChange(true); renderCk();
       setStatus("ckStatus", `Nomes copiados de ${fmtDate(prev)}. Confira e marque o que foi feito.`);
     } catch { setStatus("ckStatus", "Não foi possível copiar. Tente de novo.", true); }
@@ -2638,7 +2733,9 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
 
   // relatório da lista do dia (um perfil): cada entrega em uma linha
   function ckLinhas() {
-    return ckItens().filter(x => x.nome.trim()).map(x => [x.nome.trim(), x.marmitas || 0, x.conferida ? "Sim" : "Não", x.entregue ? "Sim" : "Não"]);
+    return ckItens().filter(x => x.nome.trim()).map(x => { const c = x.comprovante;
+      return [x.nome.trim(), x.marmitas || 0, x.conferida ? "Sim" : "Não", x.entregue ? "Sim" : "Não",
+        c ? c.recebedor : "", c ? c.quantidade : "", c ? ckHora(c) : "", c ? !!c.divergencia : false]; });
   }
   function ckDownload(filename, data, type) {
     try { downloadFile(filename, data, type); setStatus("ckStatus", `Arquivo ${filename} baixado.`); }
@@ -2664,12 +2761,18 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
     };
     header();
     linhas.forEach(r => {
-      if (y > 270) { pdf.addPage(); y = 20; header(); }
+      if (y > 262) { pdf.addPage(); y = 20; header(); }
       pdf.text(String(r[0]), cols[0][1], y);
       pdf.text(String(r[1]), L + 112, y, { align: "center" });
       pdf.text(r[2], L + 138, y, { align: "center" });
       pdf.text(r[3], L + 164, y, { align: "center" });
-      pdf.setDrawColor(225); pdf.line(L, y + 2, L + W, y + 2); y += 6.5;
+      let h = 6.5;
+      if (r[4]) {     // canhoto: quem recebeu, quanto conferiu e a que horas
+        pdf.setFontSize(8); r[7] ? pdf.setTextColor(200, 30, 50) : pdf.setTextColor(90);
+        pdf.text(`Canhoto: recebido por ${r[4]} às ${r[6]} · conferiu ${r[5]}${r[7] ? " (DIVERGENTE DO PEDIDO)" : ""}`, cols[0][1], y + 4);
+        pdf.setTextColor(0); pdf.setFontSize(10); h = 10.5;
+      }
+      pdf.setDrawColor(225); pdf.line(L, y + h - 4.5, L + W, y + h - 4.5); y += h;
     });
     const tot = sum(linhas, r => r[1]), ent = linhas.filter(r => r[3] === "Sim").length, conf = linhas.filter(r => r[2] === "Sim").length;
     y += 3; pdf.setDrawColor(0); pdf.setLineWidth(0.5); pdf.line(L, y, L + W, y); y += 6;
@@ -2682,9 +2785,175 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
     const linhas = ckLinhas();
     if (!linhas.length) { setStatus("ckStatus", "Adicione nomes antes de baixar a planilha.", true); return; }
     const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const rows = [["Data", "Perfil", "Nome", "Marmitas", "Conferida", "Entregue"]];
-    linhas.forEach(r => rows.push([fmtDate(state.ck.day), ckNome(state.ck.perfil), r[0], r[1], r[2], r[3]]));
+    const rows = [["Data", "Perfil", "Nome", "Marmitas", "Conferida", "Entregue", "Recebido por", "Qtd conferida", "Hora da confirmação", "Divergência"]];
+    linhas.forEach(r => rows.push([fmtDate(state.ck.day), ckNome(state.ck.perfil), r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[4] ? (r[7] ? "Sim" : "Não") : ""]));
     ckDownload(`entregas-${slugOf(ckNome(state.ck.perfil))}-${state.ck.day}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n"), "text/csv;charset=utf-8");
+  };
+
+  // ================= CANHOTO DIGITAL =================
+  const CN_RE = /\b(h?abix)\b/i;                        // nomes que já pedem canhoto sozinhos
+  const hhmm = v => { const d = new Date(v); return isNaN(d) ? "" : `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const toIso = v => v && typeof v.toDate === "function" ? v.toDate().toISOString() : (typeof v === "string" ? v : "");
+  const ckHora = c => hhmm(state.ck.srv[c.id] || c.em);
+  const cn = { id: null, foto: null, fotoW: 0, fotoH: 0, dirty: false, draw: false, last: null, view: null, viewId: null };
+
+  function cnShow(on) {
+    $("cnBack").hidden = !on;
+    document.body.classList.toggle("sheet-open", on);
+  }
+  function cnClose() { cnShow(false); cn.id = null; }
+  function cnPadInit() {
+    const cv = $("cnSig"), r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.max(10, Math.round(r.width * dpr)); cv.height = Math.max(10, Math.round(r.height * dpr));
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#111";
+    cn.dirty = false; cn.draw = false; cn.last = null;
+  }
+  (() => {
+    const cv = $("cnSig"), at = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    cv.addEventListener("pointerdown", e => {
+      e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch {}
+      const ctx = cv.getContext("2d"), p = at(e); cn.draw = true; cn.last = p; cn.dirty = true; setStatus("cnStatus", "");
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + 0.01, p.y + 0.01); ctx.stroke();
+    });
+    cv.addEventListener("pointermove", e => {
+      if (!cn.draw) return;
+      const ctx = cv.getContext("2d"), p = at(e);
+      ctx.beginPath(); ctx.moveTo(cn.last.x, cn.last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); cn.last = p;
+    });
+    const stop = () => { cn.draw = false; };
+    cv.addEventListener("pointerup", stop); cv.addEventListener("pointercancel", stop);
+  })();
+  $("cnClear").onclick = () => cnPadInit();
+  function cnSigData() {
+    const cv = $("cnSig"), out = document.createElement("canvas"); out.width = 360; out.height = 120;
+    const c = out.getContext("2d"), k = Math.min(360 / cv.width, 120 / cv.height), w = cv.width * k, h = cv.height * k;
+    c.fillStyle = "#fff"; c.fillRect(0, 0, 360, 120); c.drawImage(cv, (360 - w) / 2, (120 - h) / 2, w, h);
+    return out.toDataURL("image/png");
+  }
+  $("cnFoto").onchange = ev => {
+    const f = ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      const k = Math.min(1, 720 / Math.max(img.width, img.height)), w = Math.round(img.width * k), h = Math.round(img.height * k);
+      const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
+      let q = 0.6, d = c.toDataURL("image/jpeg", q);
+      while (d.length > 140000 && q > 0.3) { q -= 0.1; d = c.toDataURL("image/jpeg", q); }   // foto leve: o registro tem limite de tamanho
+      URL.revokeObjectURL(url);
+      cn.foto = d; cn.fotoW = w; cn.fotoH = h; $("cnPrev").src = d; $("cnPrevBox").hidden = false;
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); setStatus("cnStatus", "Não foi possível ler a foto.", true); };
+    img.src = url;
+  };
+  function cnOpen(id) {
+    const it = ckItens().find(x => x.id === id);
+    if (!it) return;
+    Object.assign(cn, { id, foto: null, fotoW: 0, fotoH: 0 });
+    $("cnTitle").textContent = "Canhoto de entrega";
+    $("cnWho").innerHTML = ""; $("cnWho").append(el("b", {}, it.nome), ` · ${ckNome(state.ck.perfil)} · pedido: ${it.marmitas || 0} ${(it.marmitas || 0) === 1 ? "marmita" : "marmitas"}`);
+    $("cnForm").hidden = false; $("cnView").hidden = true;
+    $("cnQtd").value = it.marmitas || ""; $("cnRec").value = ""; $("cnWarn").hidden = true; $("cnPrevBox").hidden = true; $("cnOk").disabled = false;
+    setStatus("cnStatus", "");
+    cnShow(true); cnPadInit(); $("cnRec").focus();
+  }
+  $("cnQtd").addEventListener("input", () => {
+    const it = ckItens().find(x => x.id === cn.id), q = parseInt($("cnQtd").value, 10) || 0, w = $("cnWarn");
+    if (it && $("cnQtd").value !== "" && q !== (it.marmitas || 0)) { w.hidden = false; w.textContent = `Diferente do pedido (${it.marmitas || 0}). Será registrado como divergência.`; }
+    else w.hidden = true;
+  });
+  $("cnForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const it = ckItens().find(x => x.id === cn.id);
+    if (!it || !state.db) return;
+    const qtd = parseInt($("cnQtd").value, 10), rec = $("cnRec").value.trim();
+    if (!(qtd >= 0) || $("cnQtd").value === "") { setStatus("cnStatus", "Informe a quantidade conferida.", true); return; }
+    if (rec.length < 2) { setStatus("cnStatus", "Informe o nome de quem recebeu.", true); return; }
+    if (!cn.dirty) { setStatus("cnStatus", "Peça para quem recebeu assinar na área acima.", true); return; }
+    $("cnOk").disabled = true; setStatus("cnStatus", "Registrando…");
+    const perfil = state.ck.perfil, day = state.ck.day, compId = `${day}__${perfil}__${it.id}`, agora = new Date().toISOString();
+    const pedida = it.marmitas || 0, div = qtd !== pedida;
+    const srvReal = window.firebase?.firestore?.FieldValue?.serverTimestamp?.();
+    const srv = srvReal ?? agora;
+    const body = { data: day, perfil, perfilNome: ckNome(perfil), itemId: it.id, nome: it.nome.trim(), pedida, conferida: qtd, divergencia: div,
+      recebedor: rec, assinatura: cnSigData(), foto: cn.foto || null, fotoW: cn.fotoW || 0, fotoH: cn.fotoH || 0, criadoEm: agora, servidor: srv, srvOk: !!srvReal };
+    try {
+      await state.db.collection("comprovantes").doc(compId).set(body);
+      const cur = ckItens().find(x => x.id === it.id) || it;
+      cur.entregue = true; cur.conferida = true; cur.comprovante = { id: compId, recebedor: rec, quantidade: qtd, em: agora, divergencia: div };
+      ckChange(true); cnClose(); renderCk();
+      setStatus("ckStatus", div ? `Canhoto registrado com divergência: pedido ${pedida}, conferido ${qtd}.` : `Canhoto registrado: ${qtd} ${qtd === 1 ? "marmita" : "marmitas"} recebidas por ${rec}.`);
+    } catch (e) {
+      $("cnOk").disabled = false;
+      setStatus("cnStatus", e?.code === "invalid-argument" || /size|large|exceed/i.test(String(e?.message)) ? "O registro ficou grande demais. Tente sem a foto." : "Não foi possível registrar. Verifique a conexão e tente de novo.", true);
+    }
+  });
+  $("cnCancel").onclick = cnClose; $("cnClose").onclick = cnClose;
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("cnBack").hidden) cnClose(); });
+
+  // ver o comprovante já registrado
+  async function cnView(compId) {
+    cnShow(true);
+    $("cnForm").hidden = true; $("cnView").hidden = false; $("cnTitle").textContent = "Comprovante de entrega";
+    const body = $("cnViewBody"); body.textContent = "Carregando…"; $("cnPdf").disabled = true; setStatus("cnViewStatus", "");
+    try {
+      const s = await state.db.collection("comprovantes").doc(compId).get();
+      if (!s.exists) throw new Error("falta");
+      const c = s.data(); cn.view = c; cn.viewId = compId;
+      const when = toIso(c.servidor) || c.criadoEm, dt = new Date(when);
+      body.textContent = "";
+      const linhas = [
+        ["Destinatário", `${c.perfilNome} · ${fmtDate(c.data)}`, c.nome],
+        ["Pedido", "", `${c.pedida} ${c.pedida === 1 ? "marmita" : "marmitas"}`],
+        ["Conferido na entrega", c.divergencia ? "Diferente do pedido" : "Igual ao pedido", `${c.conferida} ${c.conferida === 1 ? "marmita" : "marmitas"}`],
+        ["Recebido por", "", c.recebedor],
+        ["Confirmado em", toIso(c.servidor) && c.srvOk !== false ? "Horário do servidor" : "Horário do aparelho", `${fmtDate(iso(dt))} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`],
+      ];
+      linhas.forEach(([rot, sub, val], i) => body.append(el("div", { class: "lrow in" },
+        el("div", { class: "t" }, el("span", {}, rot), sub ? el("small", { style: i === 2 && c.divergencia ? "color:var(--danger)" : "" }, sub) : null),
+        el("b", { style: i === 2 && c.divergencia ? "color:var(--danger)" : "" }, val))));
+      const extra = el("div", { class: "wrap", style: "gap:10px;margin-top:10px" }, el("span", { class: "label" }, "Assinatura"), el("img", { src: c.assinatura, alt: "Assinatura de quem recebeu", width: 280 }));
+      if (c.foto) extra.append(el("span", { class: "label" }, "Foto"), el("img", { src: c.foto, alt: "Foto das caixas entregues" }));
+      body.append(extra);
+      $("cnPdf").disabled = false;
+    } catch { body.textContent = "Não foi possível abrir o comprovante. Verifique a conexão."; }
+  }
+  $("cnPdf").onclick = () => {
+    const c = cn.view;
+    if (!c) return;
+    if (!window.jspdf) { setStatus("cnViewStatus", "O gerador de PDF não carregou. Recarregue a página.", true); return; }
+    const { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: "mm", format: "a4" }), L = 18;
+    let y = 24;
+    pdf.setFont("helvetica", "bold"); pdf.setFontSize(20); pdf.text("Comprovante de entrega", L, y); y += 8;
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(90);
+    pdf.text(`${c.perfilNome} - ${fmtDate(c.data)}`, L, y); y += 12; pdf.setTextColor(0);
+    const when = toIso(c.servidor) || c.criadoEm, dt = new Date(when);
+    const linha = (rot, val, vermelho) => {
+      pdf.setFontSize(9); pdf.setTextColor(110); pdf.text(rot, L, y); y += 5;
+      pdf.setFontSize(13); pdf.setFont("helvetica", "bold"); vermelho ? pdf.setTextColor(200, 30, 50) : pdf.setTextColor(0);
+      pdf.text(String(val), L, y); pdf.setFont("helvetica", "normal"); y += 9;
+    };
+    linha("DESTINATARIO", c.nome);
+    linha("PEDIDO (MARMITAS)", c.pedida);
+    linha("CONFERIDO NA ENTREGA", c.divergencia ? `${c.conferida}  (DIVERGENTE DO PEDIDO)` : c.conferida, c.divergencia);
+    linha("RECEBIDO POR", c.recebedor);
+    linha(toIso(c.servidor) && c.srvOk !== false ? "CONFIRMADO EM (HORARIO DO SERVIDOR)" : "CONFIRMADO EM (HORARIO DO APARELHO)", `${fmtDate(iso(dt))} as ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`);
+    pdf.setFontSize(9); pdf.setTextColor(110); pdf.text("ASSINATURA DE QUEM RECEBEU", L, y); y += 3;
+    try { pdf.addImage(c.assinatura, "PNG", L, y, 72, 24); } catch {}
+    pdf.setDrawColor(200); pdf.rect(L, y, 72, 24); y += 32;
+    if (c.foto) {
+      const w = 80, h = c.fotoW && c.fotoH ? w * c.fotoH / c.fotoW : 60;
+      if (y + h + 24 > 285) { pdf.addPage(); y = 24; }
+      pdf.setTextColor(110); pdf.text("FOTO DAS CAIXAS", L, y); y += 3;
+      try { pdf.addImage(c.foto, "JPEG", L, y, w, h); } catch {}
+      y += h + 8;
+    }
+    pdf.setFontSize(8); pdf.setTextColor(130);
+    pdf.text(c.srvOk !== false ? "Confirmação registrada no app SPLOG, com o horário do servidor no momento da assinatura." : "Confirmação registrada no app SPLOG.", L, 281);
+    pdf.text(`Registro: ${cn.viewId}`, L, 285.5);
+    ckDownload(`comprovante-${slugOf(c.nome)}-${c.data}.pdf`, pdf.output("arraybuffer"), "application/pdf");
+    setStatus("cnViewStatus", "Comprovante baixado.");
   };
 
   // ---------- AJUSTES: custos fixos e sócio ----------
@@ -2900,8 +3169,8 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
   // backup
   $("bkExport").onclick = async () => {
     try {
-      const out = { app: "central-trabalho", versao: 2, exportadoEm: new Date().toISOString(), entregas: {}, config: {}, semanas: {}, custos: {}, fixos: {}, fin_lanc: {}, fin_orc: {}, fin_metas: {}, fin_import: {} };
-      for (const c of ["entregas", "config", "semanas", "custos", "fixos", "fin_lanc", "fin_orc", "fin_metas", "fin_import"]) (await state.db.collection(c).get()).docs.forEach(d => out[c][d.id] = d.data());
+      const out = { app: "central-trabalho", versao: 2, exportadoEm: new Date().toISOString(), entregas: {}, config: {}, semanas: {}, custos: {}, fixos: {}, fin_lanc: {}, fin_orc: {}, fin_metas: {}, fin_import: {}, checklist: {}, comprovantes: {} };
+      for (const c of ["entregas", "config", "semanas", "custos", "fixos", "fin_lanc", "fin_orc", "fin_metas", "fin_import", "checklist", "comprovantes"]) (await state.db.collection(c).get()).docs.forEach(d => out[c][d.id] = d.data());
       downloadFile(`backup-central-trabalho-${todayIso()}.json`, JSON.stringify(out, null, 2), "application/json");
       setStatus("bkStatus", `Backup baixado: ${Object.keys(out.entregas).length} entregas.`);
     } catch { setStatus("bkStatus", "Não foi possível gerar o backup. Verifique a conexão.", true); }
@@ -2913,7 +3182,7 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
       const data = JSON.parse(await file.text());
       if (data.app !== "central-trabalho") throw new Error("formato");
       const writes = [];
-      for (const c of ["entregas", "config", "semanas", "custos", "fixos", "fin_lanc", "fin_orc", "fin_metas", "fin_import"]) for (const [id, doc] of Object.entries(data[c] || {})) writes.push([c, id, doc]);
+      for (const c of ["entregas", "config", "semanas", "custos", "fixos", "fin_lanc", "fin_orc", "fin_metas", "fin_import", "checklist", "comprovantes"]) for (const [id, doc] of Object.entries(data[c] || {})) writes.push([c, id, doc]);
       for (let k = 0; k < writes.length; k += 400) {
         const batch = window.firebase.firestore().batch();
         writes.slice(k, k + 400).forEach(([c, id, doc]) => batch.set(state.db.collection(c).doc(id), doc));
