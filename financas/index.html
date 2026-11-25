@@ -682,6 +682,10 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   #v-adm-rel .adm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .kpi b{font-size:44px}
 }
+.diag{padding:14px 16px;gap:0}
+.diag summary{cursor:pointer;font-weight:600;font-size:15px;list-style-position:inside}
+.diag .lrow span{color:var(--muted);font-size:14px}
+.diag .note{font-size:13px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -3219,7 +3223,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   // ================= ADM ENTREGAS =================
   // Painel só de quantidades (dia, semana, mês). Valores aparecem apenas no PDF do relatório do PM.
   const ADM_MODES = ["dia", "semana", "mes"];
-  Object.assign(state, { adm: { mode: lsGet("adm.mode", "semana"), ref: todayIso(), pm: [], ck: [], hoje: [], loadedPM: false, loadedCK: false, key: "", unsubCk: null, access: [], viewer: false } });
+  Object.assign(state, { adm: { mode: lsGet("adm.mode", "semana"), ref: todayIso(), pm: [], ck: [], hoje: [], loadedPM: false, loadedCK: false, key: "", unsubCk: null, access: [], viewer: false, err: {}, diagOpen: false } });
   const adm = state.adm;
   if (!ADM_MODES.includes(adm.mode)) adm.mode = "semana";
 
@@ -3231,7 +3235,14 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   const admDoc = d => { const x = d.data(); return { id: d.id, data: x.data, perfil: x.perfil, itens: x.itens || [], inicio: x.inicio || "", fim: x.fim || "", inicioSrv: toIso(x.inicioSrv), fimSrv: toIso(x.fimSrv) }; };
   const DIAS3 = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const admPct = (a, b) => b ? Math.round(a / b * 100) : 0;
-  const admDenied = () => { clearTimeout(loadTimer); setStatus("globalStatus", "Seu acesso ao ADM Entregas não está liberado. Fale com o responsável pela operação.", true); };
+  const admErr = e => (e && e.code) || "erro";
+  const admDenied = e => {
+    clearTimeout(loadTimer);
+    const code = admErr(e);
+    setStatus("globalStatus", code === "permission-denied"
+      ? "Sem permissão para ler os dados. Confira se as regras do Firestore foram publicadas e se o seu e-mail foi liberado em Ajustes."
+      : `Não foi possível carregar os dados (${code}). Verifique a conexão e tente de novo.`, true);
+  };
 
   // ---------- período ----------
   function admRange() {
@@ -3280,25 +3291,26 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     adm.key = key; adm.unsubCk?.(); adm.loadedCK = false;
     adm.unsubCk = state.db.collection("checklist").where("data", ">=", a).where("data", "<=", b).onSnapshot(s => {
       if (key !== adm.key) return;
-      adm.ck = s.docs.map(admDoc); adm.loadedCK = true; loaded(); renderAll();
-    }, () => { adm.loadedCK = true; admDenied(); });
+      adm.ck = s.docs.map(admDoc); adm.err.ck = ""; adm.loadedCK = true; loaded(); renderAll();
+    }, e => { adm.loadedCK = true; adm.err.ck = admErr(e); admDenied(e); renderAll(); });
   }
   function startAdm(db, viewer) {
     state.db = db; adm.viewer = !!viewer;
     document.body.classList.toggle("adm-viewer", !!viewer);
     loadTimer = setTimeout(() => setStatus("globalStatus", "Os dados ainda não carregaram. Verifique a conexão.", true), 10000);
-    db.collection("entregas").where("tipo", "==", "PM").limit(5000).onSnapshot(s => { adm.pm = toList(s); adm.loadedPM = true; loaded(); renderAll(); }, admDenied);
-    db.collection("checklist").where("data", "==", todayIso()).onSnapshot(s => { adm.hoje = s.docs.map(admDoc); renderAll(); }, () => {});
+    db.collection("entregas").where("tipo", "==", "PM").limit(5000).onSnapshot(s => { adm.pm = toList(s); adm.err.pm = ""; adm.loadedPM = true; loaded(); renderAll(); },
+      e => { adm.err.pm = admErr(e); admDenied(e); renderAll(); });
+    db.collection("checklist").where("data", "==", todayIso()).onSnapshot(s => { adm.hoje = s.docs.map(admDoc); adm.err.hoje = ""; renderAll(); }, e => { adm.err.hoje = admErr(e); renderAll(); });
     db.doc("config/checklist").onSnapshot(s => {
       const perfis = s.exists && Array.isArray(s.data().perfis) ? s.data().perfis : null;
       if (perfis && perfis.length) state.ck.perfis = perfis;
       renderAll();
-    }, () => {});
+    }, e => { adm.err.cfg = admErr(e); renderAll(); });
     // nomes do relatório: quem é ADM lê o resumo publicado pelo dono; o dono lê as próprias configurações
     db.doc(viewer ? "config/relatorio" : "config/geral").onSnapshot(s => {
       const d = s.exists ? s.data() : {};
       state.cfg.cliente = d.cliente || ""; state.cfg.prestador = d.prestador || "";
-    }, () => {});
+    }, e => { adm.err.cfg = admErr(e); renderAll(); });
     admSub(); route();
   }
 
@@ -3367,6 +3379,36 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   const admEmpty = txt => el("div", { class: "empty" }, txt);
   const admTbl = (head, rows, foot, aligns) => rows.length ? mkTable(head, rows, foot, aligns) : admEmpty("Sem registros neste período.");
 
+  // ---------- diagnóstico do acesso ----------
+  function admDiag(forceOpen) {
+    const E = adm.err, lido = (ok, n, un) => E[ok] ? `erro: ${E[ok]}` : n === null ? "carregando…" : `${n} ${un}`;
+    const rows = [
+      ["Entrou como", state.email || "–"],
+      ["Tipo de acesso", adm.viewer ? "Usuário ADM liberado pelo dono" : "Dono (conta própria)"],
+      ["Entregas do PM", lido("pm", adm.loadedPM ? adm.pm.length : null, "registros lidos")],
+      ["Checklist (período carregado)", lido("ck", adm.loadedCK ? adm.ck.length : null, "listas lidas")],
+      ["Checklist de hoje", lido("hoje", adm.hoje.length, "listas")],
+      ["Configurações", E.cfg ? `erro: ${E.cfg}` : "ok"],
+    ];
+    const dicas = [];
+    if (Object.values(E).some(c => c === "permission-denied")) dicas.push("permission-denied: as regras do Firestore não foram publicadas, ou o e-mail do login não é o mesmo que foi liberado em Ajustes → Acesso ao ADM Entregas.");
+    if (!adm.viewer && adm.loadedPM && adm.loadedCK && !adm.pm.length && !adm.ck.length && !Object.values(E).some(Boolean))
+      dicas.push("Esta conta não tem dados e não está vinculada a um dono. Se você é o usuário ADM, peça ao responsável para liberar este e-mail em Ajustes → Acesso ao ADM Entregas (depois de criar o usuário no Firebase e publicar as regras).");
+    const d = el("details", { class: "panel diag" });
+    d.open = forceOpen || adm.diagOpen;
+    d.ontoggle = () => { adm.diagOpen = d.open; };
+    d.append(el("summary", {}, "Diagnóstico do acesso"), el("div", { class: "ledger", style: "margin-top:8px" }, rows.map(([k, v]) => el("div", { class: "lrow" }, el("span", {}, k), el("b", { style: "font-weight:600;text-align:right" }, v)))));
+    dicas.forEach(t => d.append(el("p", { class: "note", style: "margin:10px 0 0" }, t)));
+    return d;
+  }
+  // devolve true quando ainda não dá para desenhar (carregando ou com erro), explicando o motivo
+  function admLoading(body) {
+    if (adm.loadedPM && adm.loadedCK) return false;
+    const erro = adm.err.pm || adm.err.ck;
+    body.append(admEmpty(erro ? "Não foi possível carregar os dados." : "Carregando…"), admDiag(!!erro));
+    return true;
+  }
+
   // ---------- Painel ----------
   function admHojeCard() {
     const t = todayIso(), pm = adm.pm.filter(e => e.data === t), g = sum(pm, e => e.g), m = sum(pm, e => e.m);
@@ -3399,8 +3441,11 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   function renderAdmPainel() {
     admHead("adm");
     const body = $("admBody"); body.textContent = "";
-    if (!adm.loadedPM || !adm.loadedCK) { body.append(admEmpty("Carregando…")); return; }
+    if (admLoading(body)) return;
     const [a, b] = admRange(), A = admAgg(a, b), days = admDays(a, b), S = admSeries(days), mode = adm.mode;
+    if (!adm.pm.length && !adm.ck.length) body.append(el("div", { class: "notice" }, adm.viewer
+      ? "Ainda não há entregas lançadas pelo responsável. Quando houver, elas aparecem aqui."
+      : "Esta conta ainda não tem dados. Se você é o usuário ADM, peça ao responsável para liberar o seu e-mail em Ajustes → Acesso ao ADM Entregas. Veja o diagnóstico no fim da página."));
     const prog = el("div", { class: "track" }, el("i", { style: `width:${admPct(A.ent, A.nomes)}%;background:var(--grad)` }));
     body.append(el("div", { class: "adm-kpis" },
       admKpi("Caixas PM", A.caixas, A.caixas ? `G ${A.g} · M ${A.m}${mode !== "dia" ? ` · ${plural(A.diasPM, "dia", "dias")}` : ""}` : "Nenhuma entrega no período"),
@@ -3436,14 +3481,14 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       grid.append(admCard("Detalhe por semana", admTbl(["Semana", "Caixas PM", "G · M", "Marmitas", "Entregues"], rows,
         rows.length ? ["Mês", A.caixas, `G ${A.g} · M ${A.m}`, A.marm, `${A.ent}/${A.nomes}`] : null, ["l", "r", "r", "r", "r"]), "wide"));
     }
-    body.append(grid);
+    body.append(grid, admDiag(false));
   }
 
   // ---------- Entregas (dia a dia, só leitura) ----------
   function renderAdmEntregas() {
     admHead("adm-entregas");
     const body = $("admBodyE"); body.textContent = "";
-    if (!adm.loadedPM || !adm.loadedCK) { body.append(admEmpty("Carregando…")); return; }
+    if (admLoading(body)) return;
     const day = adm.ref, pm = adm.pm.filter(e => e.data === day).sort((x, y) => (x.hora || "").localeCompare(y.hora || ""));
     const docs = adm.ck.filter(d => d.data === day && (admNamed(d).length || admIni(d))).sort((x, y) => admOrdP(x.perfil) - admOrdP(y.perfil));
     const grid = el("div", { class: "adm-grid" });
@@ -3541,7 +3586,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   function renderAdmRel() {
     admHead("adm-rel");
     const body = $("admBodyR"); body.textContent = "";
-    if (!adm.loadedPM || !adm.loadedCK) { body.append(admEmpty("Carregando…")); return; }
+    if (admLoading(body)) return;
     const m = monthOf(adm.ref), a = `${m}-01`, b = `${m}-${pad(daysIn(m))}`, A = admAgg(a, b);
     const pill = (t, c) => el("span", { class: "pill lg " + (c || "") }, t);
     const btn = (txt, cls, fn, dis) => { const x = el("button", { type: "button", class: cls, onclick: fn }, txt); if (dis) x.disabled = true; return x; };
