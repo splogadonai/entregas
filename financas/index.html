@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<!-- Gerado a partir de ../index.html por tools/gerar-financas.py. Não edite aqui. -->
+<!-- Gerado a partir de ../index.html por tools/gerar-apps.py. Não edite aqui. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#eeecf6" media="(prefers-color-scheme: light)">
@@ -542,12 +542,13 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
   #app{max-width:1560px;gap:22px}
   h1{font-size:40px}
   .modsw{max-width:420px}
-  nav.views,nav.views.tr-nav,nav.views.fin-nav{top:0;bottom:0;left:0;right:auto;width:240px;max-width:none;margin:0;
+  nav.views,nav.views.tr-nav,nav.views.fin-nav,nav.views.adm-nav{top:0;bottom:0;left:0;right:auto;width:240px;max-width:none;margin:0;
     grid-template-columns:1fr;grid-auto-rows:min-content;align-content:start;justify-content:stretch;gap:4px;
     padding:28px 14px 24px;border-top:none;border-right:.5px solid var(--sep)}
   nav.views::before{display:block;padding:6px 14px 16px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
   nav.views.tr-nav::before{content:"Transporte"}
   nav.views.fin-nav::before{content:"Finanças"}
+  nav.views.adm-nav::before{content:"ADM Entregas"}
   nav.views a{flex-direction:row;gap:12px;font-size:15px;font-weight:500;letter-spacing:-.01em;padding:11px 14px;border-radius:14px;color:var(--fg);transition:background .15s ease}
   nav.views a svg{width:22px;height:22px;color:var(--muted)}
   nav.views a:hover{background:var(--fill)}
@@ -632,6 +633,55 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
 .lite .bg-fx .blob{animation:none}
 .lite .bg-fx .edge::after{display:none}
 .lite nav.views,.lite .install-bar,.lite .tip,.lite .panel{-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* ADM Entregas */
+@media (max-width:1099px){nav.views.adm-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
+body:not(.mod-adm) nav.adm-nav{display:none!important}
+body.mod-adm nav.tr-nav,body.mod-adm nav.fin-nav{display:none!important}
+body.app-adm .modsw{display:none!important}
+.adm-only{display:none!important}
+body.adm-viewer .adm-only{display:inline-flex!important}
+.adm-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.adm-head .seg-ctl{flex:1 1 240px;max-width:320px}
+.adm-head .switch{flex:1 1 280px;max-width:480px;margin:0}
+.adm-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.kpi{display:flex;flex-direction:column;gap:4px;padding:16px;border-radius:22px;background:var(--panel);border:1px solid var(--panel-border);box-shadow:var(--shadow);min-width:0}
+.kpi b{font-family:var(--f-display);font-weight:700;font-size:34px;line-height:1.05;letter-spacing:-.03em;background:var(--grad-text);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.kpi small{color:var(--muted);font-size:13px;line-height:1.35}
+.kpi .track{margin-top:6px}
+.adm-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.adm-grid > .panel{min-width:0}
+#v-adm td:first-child{white-space:nowrap}
+#v-adm table{font-size:13px}
+.sbars{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:var(--gap,4px);height:176px;border-bottom:.5px solid var(--sep)}
+.sb{display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;gap:5px;height:100%;background:none;border:none;padding:0 0 4px;min-width:0;border-radius:8px}
+.sb .stack{display:flex;flex-direction:column-reverse;gap:2px;height:calc(100% - 20px);justify-content:flex-start;align-items:center}
+.sb .stack i{display:block;width:78%;max-width:26px;border-radius:4px 4px 0 0;flex:none;min-height:2px}
+.sb em{font-style:normal;font-size:10px;color:var(--muted);text-align:center;min-height:14px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden}
+.sb:hover,.sb:focus-visible,.sb[aria-pressed="true"]{background:var(--fill)}
+.sb.today em{color:var(--accent);font-weight:700}
+.adm-panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.act{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;padding:10px 0;border-top:.5px solid var(--sep);align-items:baseline}
+.act:first-child{border-top:none;padding-top:2px}
+.act .hr{font-variant-numeric:tabular-nums;font-weight:600;color:var(--muted)}
+.act .tx{min-width:0;overflow-wrap:anywhere}
+.act .tx small{display:block;color:var(--muted)}
+.adm-sec{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pill.lg{font-size:13px;padding:5px 12px}
+.ckdone{color:var(--ok);font-weight:700}
+.ckno{color:var(--muted)}
+.adm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rep-card{display:flex;flex-direction:column;gap:12px}
+.rep-card .sum{display:flex;gap:8px;flex-wrap:wrap}
+.rep-card .note{font-size:13px;color:var(--muted)}
+@media (min-width:1100px){
+  .adm-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .adm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .adm-grid > .wide{grid-column:1 / -1}
+  #v-adm,#v-adm-entregas,#v-adm-rel{display:flex}
+  #v-adm-rel .adm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi b{font-size:44px}
+}
 </style>
 </head>
 <body>
@@ -665,6 +715,7 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
     </div>
     <h1 id="appTitle">Transporte de alimentação</h1>
     <span class="pill rel partner-only ro-badge" style="align-self:flex-start;margin-top:4px">Visão do sócio · somente leitura</span>
+    <span class="pill rel adm-only" style="align-self:flex-start;margin-top:4px">Visão administrativa · somente leitura</span>
     <small class="muted" id="userEmail"></small>
   </header>
 
@@ -681,6 +732,12 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
     <a href="#fin-lancar" data-view="fin-lancar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.75"/><path d="M12 8v8M8 12h8"/></svg>Lançar</a>
     <a href="#fin-orcamento" data-view="fin-orcamento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z"/><path d="M15 3.8A8.5 8.5 0 0 1 20.2 9H15z"/></svg>Orçamento</a>
     <a href="#fin-metas" data-view="fin-metas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.75"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>Metas</a>
+  </nav>
+
+  <nav class="views adm-nav" aria-label="Seções do ADM Entregas">
+    <a href="#adm" data-view="adm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="7" width="3" height="10.5" rx="1"/><rect x="15.5" y="4" width="3" height="13.5" rx="1"/></svg>Painel</a>
+    <a href="#adm-entregas" data-view="adm-entregas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5h11v9H3z"/><path d="M14 9.5h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>Entregas</a>
+    <a href="#adm-rel" data-view="adm-rel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h7l4 4v11.5a1.5 1.5 0 0 1-1.5 1.5h-9.5a1.5 1.5 0 0 1-1.5-1.5v-14a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M13.5 3.5v4.5h4.5M9 13h6M9 16.5h4"/></svg>Relatórios</a>
   </nav>
 
   <div class="status" id="globalStatus" role="status"></div>
@@ -858,6 +915,20 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
       <div class="list" id="dayList"><div class="empty">Carregando…</div></div>
       <div class="totals"><span>Total do dia</span><span class="num" id="dayTotal">R$ 0,00</span></div>
     </section>
+  </section>
+
+  <!-- ===================== ADM ENTREGAS ===================== -->
+  <section id="v-adm" class="wrap" style="gap:18px" hidden>
+    <div id="admHead"></div>
+    <div id="admBody" class="wrap" style="gap:16px"><div class="empty">Carregando…</div></div>
+  </section>
+  <section id="v-adm-entregas" class="wrap" style="gap:18px" hidden>
+    <div id="admHeadE"></div>
+    <div id="admBodyE" class="wrap" style="gap:16px"><div class="empty">Carregando…</div></div>
+  </section>
+  <section id="v-adm-rel" class="wrap" style="gap:18px" hidden>
+    <div id="admHeadR"></div>
+    <div id="admBodyR" class="wrap" style="gap:16px"><div class="empty">Carregando…</div></div>
   </section>
 
   <!-- ===================== CHECKLIST DE ENTREGAS ===================== -->
@@ -1178,6 +1249,22 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
       <div class="status" id="accStatus" role="status"></div>
     </form>
 
+    <form class="panel" id="admForm">
+      <h2>Acesso ao ADM Entregas</h2>
+      <p class="muted" style="margin:0;font-size:14px">Uma pessoa, além de você, pode acompanhar as entregas (PM e checklist) em <b>eusoujoaoneto.github.io/entregas/adm/</b>. Ela só lê: vê quantidades no painel e baixa os relatórios em PDF. Não vê custos nem finanças.</p>
+      <ol class="steps">
+        <li>No Firebase, em Authentication → Usuários, crie o usuário com o e-mail e uma senha.</li>
+        <li>Coloque o e-mail aqui e toque em Liberar acesso ADM.</li>
+        <li>Mande o link do ADM Entregas e a senha para a pessoa.</li>
+      </ol>
+      <div class="row">
+        <label class="field"><span class="label">E-mail do usuário ADM</span><input type="email" id="admEmail" autocomplete="off" placeholder="nome@email.com"></label>
+      </div>
+      <button class="primary" type="submit">Liberar acesso ADM</button>
+      <div id="admList" class="today"></div>
+      <div class="status" id="admStatus" role="status"></div>
+    </form>
+
     <div class="panel">
       <h2>Backup</h2>
       <p class="muted" style="margin:0;font-size:14px">Baixe uma cópia de todos os seus registros, ou importe um backup para este app.</p>
@@ -1238,13 +1325,18 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
 <script>
 (() => {
   // ---------- qual app: Transporte ou Finanças ----------
-  const APP = /\/financas(\/|\/index\.html)?$/.test(location.pathname) ? "fin" : "tr";
+  const APP = /\/adm(\/|\/index\.html)?$/.test(location.pathname) ? "adm" : /\/financas(\/|\/index\.html)?$/.test(location.pathname) ? "fin" : "tr";
   document.body.classList.add("app-" + APP);
   if (navigator.deviceMemory && navigator.deviceMemory <= 3) document.documentElement.classList.add("lite");   // pouca memória: modo leve
   if (APP === "fin") {
     document.title = "SPLOG · Finanças da família";
     document.querySelector(".login-brand small").textContent = "Finanças da família";
     document.querySelector("#installBar .t b").textContent = "Instale o SPLOG Finanças";
+  }
+  if (APP === "adm") {
+    document.title = "SPLOG · ADM Entregas";
+    document.querySelector(".login-brand small").textContent = "ADM Entregas";
+    document.querySelector("#installBar .t b").textContent = "Instale o SPLOG ADM";
   }
 
   // ---------- helpers ----------
@@ -1302,8 +1394,16 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
 
   // ---------- routing ----------
   const FIN_VIEWS = ["fin", "fin-lancar", "fin-orcamento", "fin-metas"];
-  const VIEWS = ["painel", "registrar", "checklist", "custos", "relatorio", "ajustes", ...FIN_VIEWS];
+  const ADM_VIEWS = ["adm", "adm-entregas", "adm-rel"];
+  const VIEWS = ["painel", "registrar", "checklist", "custos", "relatorio", "ajustes", ...FIN_VIEWS, ...ADM_VIEWS];
   function updateChrome() {
+    if (APP === "adm") {
+      document.body.classList.add("mod-adm");
+      document.body.classList.toggle("has-tabs", !!state.db);
+      $("eyebrow").textContent = "ADM Entregas";
+      $("appTitle").textContent = "ADM Entregas";
+      return;
+    }
     const fin = state.view.startsWith("fin");
     document.body.classList.toggle("mod-fin", fin);
     document.body.classList.toggle("has-tabs", !!state.db && (fin || !state.partner));
@@ -1313,7 +1413,7 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
   }
   function route() {
     const h = location.hash.slice(1);
-    const allowed = APP === "fin" ? FIN_VIEWS : state.partner ? ["painel"] : VIEWS;
+    const allowed = APP === "adm" ? ADM_VIEWS : APP === "fin" ? FIN_VIEWS : state.partner ? ["painel"] : VIEWS.filter(v => !ADM_VIEWS.includes(v));
     const prev = state.view;
     state.view = allowed.includes(h) ? h : allowed[0];
     if (prev !== state.view) window.scrollTo(0, 0);
@@ -1322,7 +1422,7 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
     updateChrome();
     VIEWS.forEach(v => { $("v-" + v).hidden = v !== state.view; });
     $$("nav.views a").forEach(a => a.setAttribute("aria-current", a.dataset.view === state.view ? "page" : "false"));
-    if (state.view === "ajustes") { fillCfgForm(); fillFixForm(); renderAcesso(); }
+    if (state.view === "ajustes") { fillCfgForm(); fillFixForm(); renderAcesso(); renderAdmAcesso(); }
     renderAll();
   }
   window.addEventListener("hashchange", route);
@@ -1788,7 +1888,7 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
     saveFile(`${fileBase()}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n"));
   };
 
-  $("pdfBtn").onclick = () => {
+  const repPdf = () => {
     if (!window.jspdf) { setStatus("repStatus", "O gerador de PDF não carregou. Verifique a conexão e recarregue.", true); return; }
     const R = reportData();
     if (!R.pm.length && !R.ot.length) { setStatus("repStatus", `Não há entregas${SCOPES[state.repScope] ? " de " + SCOPES[state.repScope] : ""} neste mês para gerar o PDF.`, true); return; }
@@ -1844,6 +1944,7 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
     table(["Seção", "Valor"], tRows, ["Total a receber", BRL(R.total)], [134, 40], ["l", "r"]);
     saveFile(`${fileBase()}.pdf`, pdf.output("arraybuffer"));
   };
+  $("pdfBtn").onclick = repPdf;
 
   // ---------- CUSTOS: cálculos ----------
   const chartKeys = () => state.partner ? ["PM"] : ["PM", "PED", "OUT"];
@@ -3115,6 +3216,374 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
     setStatus("cnViewStatus", "Comprovante baixado.");
   };
 
+  // ================= ADM ENTREGAS =================
+  // Painel só de quantidades (dia, semana, mês). Valores aparecem apenas no PDF do relatório do PM.
+  const ADM_MODES = ["dia", "semana", "mes"];
+  Object.assign(state, { adm: { mode: lsGet("adm.mode", "semana"), ref: todayIso(), pm: [], ck: [], hoje: [], loadedPM: false, loadedCK: false, key: "", unsubCk: null, access: [], viewer: false } });
+  const adm = state.adm;
+  if (!ADM_MODES.includes(adm.mode)) adm.mode = "semana";
+
+  const admNamed = d => (d.itens || []).filter(x => String(x.nome || "").trim());
+  const admIni = d => d.inicioSrv || d.inicio || "";
+  const admFim = d => d.fimSrv || d.fim || "";
+  const admDurMs = d => admIni(d) && admFim(d) ? Math.max(0, new Date(admFim(d)) - new Date(admIni(d))) : 0;
+  const admOrdP = id => { const i = state.ck.perfis.findIndex(p => p.id === id); return i < 0 ? 99 : i; };
+  const admDoc = d => { const x = d.data(); return { id: d.id, data: x.data, perfil: x.perfil, itens: x.itens || [], inicio: x.inicio || "", fim: x.fim || "", inicioSrv: toIso(x.inicioSrv), fimSrv: toIso(x.fimSrv) }; };
+  const DIAS3 = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  const admPct = (a, b) => b ? Math.round(a / b * 100) : 0;
+  const admDenied = () => { clearTimeout(loadTimer); setStatus("globalStatus", "Seu acesso ao ADM Entregas não está liberado. Fale com o responsável pela operação.", true); };
+
+  // ---------- período ----------
+  function admRange() {
+    if (adm.mode === "dia") return [adm.ref, adm.ref];
+    if (adm.mode === "semana") { const m = weekOf(adm.ref); return [m, addDays(m, 6)]; }
+    const m = monthOf(adm.ref); return [`${m}-01`, `${m}-${pad(daysIn(m))}`];
+  }
+  function admWindow() { const m = monthOf(adm.ref); return [addDays(`${m}-01`, -7), addDays(`${m}-${pad(daysIn(m))}`, 7)]; }
+  const admModeOf = tab => tab === "adm" ? adm.mode : tab === "adm-entregas" ? "dia" : "mes";
+  function admLabel(tab) {
+    const mode = admModeOf(tab), t = todayIso();
+    if (mode === "dia") { const w = DOWL[parse(adm.ref).getDay()]; return { t: adm.ref === t ? "Hoje" : adm.ref === addDays(t, -1) ? "Ontem" : w, s: `${w} · ${fmtDate(adm.ref)}` }; }
+    if (mode === "semana") { const a = weekOf(adm.ref), b = addDays(a, 6); return { t: `${short(a)} a ${short(b)}`, s: weekOf(t) === a ? "Semana atual" : monthOf(a) === monthOf(b) ? monthLabel(monthOf(a)) : `${monthLabel(monthOf(a))} / ${monthLabel(monthOf(b))}` }; }
+    return { t: monthLabel(monthOf(adm.ref)), s: tab === "adm-rel" ? "Mês do relatório" : monthOf(adm.ref) === monthOf(t) ? "Mês atual" : "Mês completo" };
+  }
+  function admStep(tab, dir) {
+    const mode = admModeOf(tab);
+    if (mode === "dia") return addDays(adm.ref, dir);
+    if (mode === "semana") return addDays(adm.ref, 7 * dir);
+    return `${addMonth(monthOf(adm.ref), dir)}-01`;
+  }
+  function admIsNow(tab) {
+    const mode = admModeOf(tab), t = todayIso();
+    return mode === "dia" ? adm.ref === t : mode === "semana" ? weekOf(adm.ref) === weekOf(t) : monthOf(adm.ref) === monthOf(t);
+  }
+  function admSetRef(r) { adm.ref = r; admSub(); renderAll(); }
+  function admSetMode(m) { adm.mode = m; lsSet("adm.mode", m); renderAll(); }
+  function admHead(tab) {
+    const box = $(tab === "adm" ? "admHead" : tab === "adm-entregas" ? "admHeadE" : "admHeadR"); box.textContent = "";
+    const lb = admLabel(tab);
+    const nav = el("div", { class: "switch" },
+      el("button", { class: "arrow", type: "button", "aria-label": "Período anterior", onclick: () => admSetRef(admStep(tab, -1)) }, "‹"),
+      el("div", { class: "mid" }, el("b", {}, lb.t), el("small", {}, lb.s)),
+      el("button", { class: "arrow", type: "button", "aria-label": "Próximo período", onclick: () => admSetRef(admStep(tab, 1)) }, "›"));
+    const seg = tab === "adm" ? el("div", { class: "seg-ctl", role: "group", "aria-label": "Período" },
+      ADM_MODES.map(m => el("button", { type: "button", "aria-pressed": String(adm.mode === m), onclick: () => admSetMode(m) }, { dia: "Dia", semana: "Semana", mes: "Mês" }[m]))) : null;
+    box.append(el("div", { class: "adm-head" }, seg, nav));
+    if (!admIsNow(tab)) box.append(el("button", { class: "back-today", type: "button", onclick: () => admSetRef(todayIso()) }, "Voltar para hoje"));
+  }
+
+  // ---------- dados ----------
+  function admSub() {
+    if (!state.db) return;
+    const [a, b] = admWindow(), key = `${a}|${b}`;
+    if (key === adm.key) return;
+    adm.key = key; adm.unsubCk?.(); adm.loadedCK = false;
+    adm.unsubCk = state.db.collection("checklist").where("data", ">=", a).where("data", "<=", b).onSnapshot(s => {
+      if (key !== adm.key) return;
+      adm.ck = s.docs.map(admDoc); adm.loadedCK = true; loaded(); renderAll();
+    }, () => { adm.loadedCK = true; admDenied(); });
+  }
+  function startAdm(db, viewer) {
+    state.db = db; adm.viewer = !!viewer;
+    document.body.classList.toggle("adm-viewer", !!viewer);
+    loadTimer = setTimeout(() => setStatus("globalStatus", "Os dados ainda não carregaram. Verifique a conexão.", true), 10000);
+    db.collection("entregas").where("tipo", "==", "PM").limit(5000).onSnapshot(s => { adm.pm = toList(s); adm.loadedPM = true; loaded(); renderAll(); }, admDenied);
+    db.collection("checklist").where("data", "==", todayIso()).onSnapshot(s => { adm.hoje = s.docs.map(admDoc); renderAll(); }, () => {});
+    db.doc("config/checklist").onSnapshot(s => {
+      const perfis = s.exists && Array.isArray(s.data().perfis) ? s.data().perfis : null;
+      if (perfis && perfis.length) state.ck.perfis = perfis;
+      renderAll();
+    }, () => {});
+    // nomes do relatório: quem é ADM lê o resumo publicado pelo dono; o dono lê as próprias configurações
+    db.doc(viewer ? "config/relatorio" : "config/geral").onSnapshot(s => {
+      const d = s.exists ? s.data() : {};
+      state.cfg.cliente = d.cliente || ""; state.cfg.prestador = d.prestador || "";
+    }, () => {});
+    admSub(); route();
+  }
+
+  // ---------- cálculos (só quantidades) ----------
+  function admAgg(a, b) {
+    const pm = adm.pm.filter(e => e.data >= a && e.data <= b);
+    const g = sum(pm, e => e.g), m = sum(pm, e => e.m);
+    const docs = adm.ck.filter(d => d.data >= a && d.data <= b);
+    const perf = {}, t = { marm: 0, nomes: 0, conf: 0, ent: 0, canh: 0, div: 0, listas: 0, ini: 0, fin: 0 }, dur = [];
+    docs.forEach(d => {
+      const its = admNamed(d);
+      if (!its.length && !admIni(d)) return;
+      const o = perf[d.perfil] || (perf[d.perfil] = { marm: 0, nomes: 0, conf: 0, ent: 0, canh: 0, div: 0, listas: 0, fin: 0 });
+      const add = (k, v) => { o[k] += v; t[k] += v; };
+      add("marm", sum(its, x => x.marmitas)); add("nomes", its.length);
+      add("conf", its.filter(x => x.conferida).length); add("ent", its.filter(x => x.entregue).length);
+      add("canh", its.filter(x => x.comprovante).length); add("div", its.filter(x => x.comprovante && x.comprovante.divergencia).length);
+      add("listas", 1);
+      if (admIni(d)) t.ini++;
+      if (admFim(d)) { add("fin", 1); dur.push(admDurMs(d)); }
+    });
+    return { pm, g, m, caixas: g + m, diasPM: new Set(pm.map(e => e.data)).size, docs, perf, ...t, durMed: dur.length ? sum(dur, x => x) / dur.length : 0 };
+  }
+  function admSeries(days) {
+    return days.map(d => {
+      const pm = adm.pm.filter(e => e.data === d), docs = adm.ck.filter(x => x.data === d), byP = {};
+      docs.forEach(x => { byP[x.perfil] = (byP[x.perfil] || 0) + sum(admNamed(x), i => i.marmitas); });
+      const its = docs.flatMap(admNamed);
+      return { d, g: sum(pm, e => e.g), m: sum(pm, e => e.m), byP, marm: sum(Object.values(byP), v => v), nomes: its.length, ent: its.filter(x => x.entregue).length };
+    });
+  }
+  const admDays = (a, b) => { const o = []; for (let d = a; d <= b; d = addDays(d, 1)) o.push(d); return o; };
+  const admPerfOrder = perf => Object.keys(perf).sort((x, y) => admOrdP(x) - admOrdP(y));
+  const PERF_COLORS = ["var(--c-out)", "var(--c-ped)", "var(--c-pm)"];
+  const admPerfColor = id => { const i = admOrdP(id); return i < PERF_COLORS.length ? PERF_COLORS[i] : "var(--muted)"; };
+  function admStatus(d) {
+    const its = admNamed(d), ent = its.filter(x => x.entregue).length, ini = admIni(d), fim = admFim(d);
+    if (fim) return { txt: `Concluída ${hhmm(ini)} – ${hhmm(fim)} · ${fmtDur(admDurMs(d))}`, cls: "ok", tag: "Concluída" };
+    if (ini) return { txt: `Em andamento desde ${hhmm(ini)} · ${ent}/${its.length} entregues`, cls: "rel", tag: "Em andamento" };
+    return { txt: its.length ? "Aguardando início da entrega" : "Lista vazia", cls: "", tag: its.length ? "Aguardando" : "Vazia" };
+  }
+
+  // ---------- peças visuais ----------
+  const admKpi = (label, big, sub, extra) => el("div", { class: "kpi" }, el("span", { class: "label" }, label), el("b", { class: "num" }, String(big)), el("small", {}, sub), extra || null);
+  const admLegend = items => el("div", { class: "legend" }, items.map(([c, t]) => el("span", {}, el("i", { class: "dot", style: `background:${c}` }), t)));
+  function admBars(rows, segsOf, capOf, empty) {
+    const wrap = el("div", { class: "wrap", style: "gap:8px" });
+    const tot = r => sum(segsOf(r), s => s.v);
+    if (!rows.some(r => tot(r) > 0)) { wrap.append(el("div", { class: "empty" }, empty)); return wrap; }
+    const cap = el("div", { class: "cap" }, "Toque numa barra para ver as quantidades.");
+    const max = Math.max(1, ...rows.map(tot)), n = rows.length, t = todayIso();
+    const chart = el("div", { class: "sbars", style: `--n:${n};--gap:${n > 12 ? 2 : 5}px` });
+    rows.forEach((r, i) => {
+      const segs = segsOf(r).filter(s => s.v > 0), dt = parse(r.d), day = dt.getDate();
+      const tick = n <= 8 ? `${DIAS3[dt.getDay()]} ${day}` : (day === 1 || day % 5 === 0 || i === n - 1 ? String(day) : "");
+      const b = el("button", { type: "button", class: "sb" + (r.d === t ? " today" : ""), "aria-label": `${DIAS3[dt.getDay()]} ${fmtDate(r.d)}: ${tot(r)}`,
+        onclick: () => { chart.querySelectorAll(".sb").forEach(x => x.setAttribute("aria-pressed", "false")); b.setAttribute("aria-pressed", "true"); cap.textContent = capOf(r); } },
+        el("div", { class: "stack" }, segs.map(s => el("i", { style: `height:${Math.max(2, s.v / max * 100)}%;background:${s.c}`, title: s.n }))),
+        el("em", {}, tick));
+      chart.append(b);
+    });
+    wrap.append(chart, cap);
+    return wrap;
+  }
+  const admCard = (title, body, cls, right) => el("section", { class: "panel " + (cls || "") }, el("div", { class: "adm-panel-head" }, el("h2", {}, title), right || null), body);
+  const admEmpty = txt => el("div", { class: "empty" }, txt);
+  const admTbl = (head, rows, foot, aligns) => rows.length ? mkTable(head, rows, foot, aligns) : admEmpty("Sem registros neste período.");
+
+  // ---------- Painel ----------
+  function admHojeCard() {
+    const t = todayIso(), pm = adm.pm.filter(e => e.data === t), g = sum(pm, e => e.g), m = sum(pm, e => e.m);
+    const box = el("div", { class: "today" });
+    box.append(el("div", { class: "tline" }, el("div", { class: "t" }, el("b", {}, "Posto da Mata"), el("small", {}, pm.length ? `G ${g} · M ${m} · ${plural(pm.length, "entrega", "entregas")}` : "Nenhuma entrega registrada hoje")),
+      el("span", { class: "pill " + (pm.length ? "ok" : "") }, `${g + m} ${g + m === 1 ? "caixa" : "caixas"}`)));
+    const docs = adm.hoje.filter(d => admNamed(d).length || admIni(d)).sort((x, y) => admOrdP(x.perfil) - admOrdP(y.perfil));
+    docs.forEach(d => {
+      const its = admNamed(d), s = admStatus(d);
+      box.append(el("div", { class: "tline" }, el("div", { class: "t" }, el("b", {}, ckNome(d.perfil)), el("small", {}, s.txt)),
+        el("span", { class: "pill " + s.cls }, `${sum(its, x => x.marmitas)} marm.`)));
+    });
+    if (!docs.length) box.append(el("div", { class: "tline" }, el("div", { class: "t" }, el("b", {}, "Checklist"), el("small", {}, "Nenhuma lista com nomes hoje")), el("span", { class: "pill" }, "–")));
+    return admCard(`Hoje · ${fmtDate(t).slice(0, 5)}`, box, "wide");
+  }
+  function admActivity(a) {
+    const ev = [];
+    adm.pm.filter(e => e.data === a).forEach(e => ev.push({ t: e.hora || "", x: `Entrega PM · ${e.g || 0} G + ${e.m || 0} M`, s: `${(e.g || 0) + (e.m || 0)} caixas` }));
+    adm.ck.filter(d => d.data === a).forEach(d => {
+      const its = admNamed(d), nome = ckNome(d.perfil);
+      if (admIni(d)) ev.push({ t: hhmm(admIni(d)), x: `${nome} · entrega iniciada`, s: `${its.length} ${its.length === 1 ? "nome" : "nomes"} · ${sum(its, x => x.marmitas)} marmitas` });
+      if (admFim(d)) ev.push({ t: hhmm(admFim(d)), x: `${nome} · entrega finalizada`, s: `Duração ${fmtDur(admDurMs(d))} · ${its.filter(x => x.entregue).length}/${its.length} entregues` });
+    });
+    ev.sort((x, y) => (x.t || "99:99").localeCompare(y.t || "99:99"));
+    const box = el("div", {});
+    if (!ev.length) return admEmpty("Nenhuma atividade neste dia.");
+    ev.forEach(e => box.append(el("div", { class: "act" }, el("span", { class: "hr" }, e.t || "--:--"), el("span", { class: "tx" }, e.x, el("small", {}, e.s)))));
+    return box;
+  }
+  function renderAdmPainel() {
+    admHead("adm");
+    const body = $("admBody"); body.textContent = "";
+    if (!adm.loadedPM || !adm.loadedCK) { body.append(admEmpty("Carregando…")); return; }
+    const [a, b] = admRange(), A = admAgg(a, b), days = admDays(a, b), S = admSeries(days), mode = adm.mode;
+    const prog = el("div", { class: "track" }, el("i", { style: `width:${admPct(A.ent, A.nomes)}%;background:var(--grad)` }));
+    body.append(el("div", { class: "adm-kpis" },
+      admKpi("Caixas PM", A.caixas, A.caixas ? `G ${A.g} · M ${A.m}${mode !== "dia" ? ` · ${plural(A.diasPM, "dia", "dias")}` : ""}` : "Nenhuma entrega no período"),
+      admKpi("Marmitas (checklist)", A.marm, A.listas ? `${plural(A.nomes, "nome", "nomes")} em ${plural(A.listas, "lista", "listas")}` : "Nenhuma lista no período"),
+      admKpi("Nomes entregues", `${A.ent}/${A.nomes}`, A.nomes ? `${admPct(A.ent, A.nomes)}% concluído · ${A.conf} conferidos` : "Sem nomes no período", A.nomes ? prog : null),
+      admKpi("Entregas finalizadas", `${A.fin}/${A.listas}`, A.durMed ? `Tempo médio ${fmtDur(A.durMed)}` : A.listas ? "Nenhuma finalizada ainda" : "Sem entregas no período")));
+    const grid = el("div", { class: "adm-grid" });
+    grid.append(admHojeCard());
+    if (mode === "dia") {
+      grid.append(admCard("Atividade do dia", admActivity(a), "wide"));
+    } else {
+      grid.append(
+        admCard("Caixas PM por dia", el("div", { class: "wrap", style: "gap:10px" }, admLegend([["var(--c-pm)", "G"], ["var(--c-ped)", "M"]]),
+          admBars(S, r => [{ v: r.g, c: "var(--c-pm)", n: "G" }, { v: r.m, c: "var(--c-ped)", n: "M" }],
+            r => `${DIAS3[parse(r.d).getDay()]} ${short(r.d)}: G ${r.g} · M ${r.m} · ${r.g + r.m} caixas`, "Nenhuma caixa neste período."))),
+        admCard("Marmitas por dia (checklist)", el("div", { class: "wrap", style: "gap:10px" }, admLegend(admPerfOrder(A.perf).map(id => [admPerfColor(id), ckNome(id)])),
+          admBars(S, r => admPerfOrder(r.byP).map(id => ({ v: r.byP[id], c: admPerfColor(id), n: ckNome(id) })),
+            r => `${DIAS3[parse(r.d).getDay()]} ${short(r.d)}: ${r.marm} marmitas${Object.keys(r.byP).length ? " (" + admPerfOrder(r.byP).map(id => `${ckNome(id)} ${r.byP[id]}`).join(" · ") + ")" : ""}`, "Nenhuma marmita neste período."))));
+    }
+    // checklist por perfil
+    const ids = admPerfOrder(A.perf);
+    grid.append(admCard("Checklist por perfil", admTbl(["Perfil", "Listas", "Marm.", "Nomes", "Entr.", "Canh.", "Div."],
+      ids.map(id => { const o = A.perf[id]; return [ckNome(id), o.listas, o.marm, o.nomes, `${o.ent}/${o.nomes}`, o.canh || "–", o.div || "–"]; }),
+      ids.length ? ["Total", A.listas, A.marm, A.nomes, `${A.ent}/${A.nomes}`, A.canh || "–", A.div || "–"] : null, ["l", "r", "r", "r", "r", "r", "r"]), "wide",
+      el("small", { class: "muted" }, "Canh. = canhotos · Div. = divergências")));
+    if (mode === "semana") {
+      const rows = S.filter(r => r.g || r.m || r.marm).map(r => [`${DIAS3[parse(r.d).getDay()]} ${short(r.d)}`, r.g + r.m, `G ${r.g} · M ${r.m}`, r.marm, `${r.ent}/${r.nomes}`]);
+      grid.append(admCard("Detalhe por dia", admTbl(["Dia", "Caixas PM", "G · M", "Marmitas", "Entregues"], rows, null, ["l", "r", "r", "r", "r"]), "wide"));
+    }
+    if (mode === "mes") {
+      const m = monthOf(adm.ref), rows = monthWeeks(m).map(w => { const x = admAgg(w.s, w.e); return [`${short(w.s)} a ${short(w.e)}`, x.caixas, `G ${x.g} · M ${x.m}`, x.marm, `${x.ent}/${x.nomes}`]; })
+        .filter(r => r[1] || r[3]);
+      grid.append(admCard("Detalhe por semana", admTbl(["Semana", "Caixas PM", "G · M", "Marmitas", "Entregues"], rows,
+        rows.length ? ["Mês", A.caixas, `G ${A.g} · M ${A.m}`, A.marm, `${A.ent}/${A.nomes}`] : null, ["l", "r", "r", "r", "r"]), "wide"));
+    }
+    body.append(grid);
+  }
+
+  // ---------- Entregas (dia a dia, só leitura) ----------
+  function renderAdmEntregas() {
+    admHead("adm-entregas");
+    const body = $("admBodyE"); body.textContent = "";
+    if (!adm.loadedPM || !adm.loadedCK) { body.append(admEmpty("Carregando…")); return; }
+    const day = adm.ref, pm = adm.pm.filter(e => e.data === day).sort((x, y) => (x.hora || "").localeCompare(y.hora || ""));
+    const docs = adm.ck.filter(d => d.data === day && (admNamed(d).length || admIni(d))).sort((x, y) => admOrdP(x.perfil) - admOrdP(y.perfil));
+    const grid = el("div", { class: "adm-grid" });
+    const g = sum(pm, e => e.g), m = sum(pm, e => e.m);
+    grid.append(admCard("Posto da Mata", admTbl(["Hora", "Caixa G", "Caixa M", "Total"], pm.map(e => [e.hora || "--:--", e.g || 0, e.m || 0, (e.g || 0) + (e.m || 0)]),
+      pm.length ? ["Dia", g, m, g + m] : null, ["l", "r", "r", "r"]), "", el("span", { class: "pill " + (pm.length ? "ok" : "") }, `${g + m} caixas`)));
+    docs.forEach(d => {
+      const its = admNamed(d), s = admStatus(d), ent = its.filter(x => x.entregue).length;
+      const rows = its.map(x => { const c = x.comprovante;
+        return [x.nome.trim(), x.marmitas || 0, x.conferida ? "✓" : "–", x.entregue ? "✓" : "–",
+          c ? `${c.divergencia ? "⚠" : "✓"} ${c.recebedor} · ${hhmm(c.em)}${c.divergencia ? ` · conferiu ${c.quantidade}` : ""}` : (x.canhoto ? "pendente" : "–")]; });
+      grid.append(admCard(ckNome(d.perfil), el("div", { class: "wrap", style: "gap:12px" },
+        el("small", { class: "muted" }, s.txt),
+        el("div", { class: "track" }, el("i", { style: `width:${admPct(ent, its.length)}%;background:var(--grad)` })),
+        admTbl(["Nome", "Marm.", "Conf.", "Entr.", "Canhoto"], rows, ["Total", sum(its, x => x.marmitas), `${its.filter(x => x.conferida).length}/${its.length}`, `${ent}/${its.length}`, ""], ["l", "r", "r", "r", "l"])),
+        "", el("span", { class: "pill lg " + s.cls }, s.tag)));
+    });
+    if (!pm.length && !docs.length) grid.append(admCard("Sem entregas", admEmpty("Nenhuma entrega registrada neste dia."), "wide"));
+    body.append(grid);
+  }
+
+  // ---------- Relatórios ----------
+  function admRepMsg(txt, err) { setStatus("admRepStatus", txt, !!err); }
+  function admDownload(filename, data, type) {
+    try { downloadFile(filename, data, type); admRepMsg(`Arquivo ${filename} baixado.`); } catch { admRepMsg("Não foi possível baixar o arquivo. Tente de novo.", true); }
+  }
+  function admPmPdf() {
+    const m = monthOf(adm.ref);
+    if (!adm.pm.some(e => monthOf(e.data) === m)) { admRepMsg("Não há entregas do PM neste mês para gerar o PDF.", true); return; }
+    state.month = m; state.monthEntries = adm.pm.filter(e => monthOf(e.data) === m); state.loadedMonth = true; state.repScope = "PM";
+    repPdf();                                                                    // o mesmo PDF do relatório do PM (com valores)
+    const s = $("repStatus"); admRepMsg(s.textContent, s.classList.contains("err"));
+  }
+  function admCkDocs() {
+    const m = monthOf(adm.ref), a = `${m}-01`, b = `${m}-${pad(daysIn(m))}`;
+    return adm.ck.filter(d => d.data >= a && d.data <= b && admNamed(d).length).sort((x, y) => x.data.localeCompare(y.data) || admOrdP(x.perfil) - admOrdP(y.perfil));
+  }
+  function admCkCsv() {
+    const docs = admCkDocs(), m = monthOf(adm.ref);
+    if (!docs.length) { admRepMsg("Não há entregas do checklist neste mês.", true); return; }
+    const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [["Data", "Perfil", "Nome", "Marmitas", "Conferida", "Entregue", "Recebido por", "Qtd conferida", "Hora da confirmação", "Divergência", "Início da entrega", "Fim da entrega", "Duração"]];
+    docs.forEach(d => admNamed(d).forEach(x => { const c = x.comprovante;
+      rows.push([fmtDate(d.data), ckNome(d.perfil), x.nome.trim(), x.marmitas || 0, x.conferida ? "Sim" : "Não", x.entregue ? "Sim" : "Não",
+        c ? c.recebedor : "", c ? c.quantidade : "", c ? hhmm(c.em) : "", c ? (c.divergencia ? "Sim" : "Não") : "",
+        admIni(d) ? hhmm(admIni(d)) : "", admFim(d) ? hhmm(admFim(d)) : "", admFim(d) ? fmtDur(admDurMs(d)) : ""]); }));
+    admDownload(`checklist-${m}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n"), "text/csv;charset=utf-8");
+  }
+  function admCkPdf() {
+    if (!window.jspdf) { admRepMsg("O gerador de PDF não carregou. Verifique a conexão e recarregue.", true); return; }
+    const docs = admCkDocs(), m = monthOf(adm.ref), a = `${m}-01`, b = `${m}-${pad(daysIn(m))}`;
+    if (!docs.length) { admRepMsg("Não há entregas do checklist neste mês para gerar o PDF.", true); return; }
+    const A = admAgg(a, b), { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: "mm", format: "a4" }), L = 18, W = 174;
+    let y = 22;
+    const ensure = h => { if (y + h > 282) { pdf.addPage(); y = 20; } };
+    const cut = (s, n) => { s = String(s); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+    const table = (head, rows, widths, aligns, foot) => {
+      const xs = []; let acc = L; widths.forEach(w => { xs.push(acc); acc += w; });
+      const cell = (t, i) => { const s = String(t); aligns[i] === "r" ? pdf.text(s, xs[i] + widths[i] - 1.5, y, { align: "right" }) : pdf.text(s, xs[i] + 1.5, y); };
+      const header = () => { pdf.setFillColor(236, 233, 247); pdf.rect(L, y - 4.5, W, 7, "F"); pdf.setFont("helvetica", "bold"); pdf.setFontSize(8.5); head.forEach(cell); y += 7; pdf.setFont("helvetica", "normal"); pdf.setFontSize(9); };
+      ensure(16); header();
+      rows.forEach(r => { if (y > 276) { pdf.addPage(); y = 20; header(); } r.forEach(cell); pdf.setDrawColor(225); pdf.line(L, y + 2, L + W, y + 2); y += 6.2; });
+      if (foot) { ensure(8); pdf.setDrawColor(0); pdf.setLineWidth(0.4); pdf.line(L, y - 3.4, L + W, y - 3.4); pdf.setLineWidth(0.2); pdf.setFont("helvetica", "bold"); foot.forEach(cell); pdf.setFont("helvetica", "normal"); y += 8; }
+    };
+    const h2 = t => { ensure(14); pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.text(t, L, y); y += 6.5; pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); };
+    pdf.setFont("helvetica", "bold"); pdf.setFontSize(16); pdf.text(`Relatório de entregas - Checklist - ${monthLabel(m)}`, L, y); y += 8;
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(90);
+    if (state.cfg.cliente) { pdf.text(`Cliente: ${state.cfg.cliente}`, L, y); y += 5; }
+    if (state.cfg.prestador) { pdf.text(`Prestador: ${state.cfg.prestador}`, L, y); y += 5; }
+    pdf.text(`Período: 01/${m.slice(5)}/${m.slice(0, 4)} a ${pad(daysIn(m))}/${m.slice(5)}/${m.slice(0, 4)}`, L, y); y += 5;
+    pdf.text(`Emitido em ${fmtDate(todayIso())}`, L, y); y += 9; pdf.setTextColor(0); pdf.setFontSize(9);
+
+    h2("Resumo por perfil");
+    const ids = admPerfOrder(A.perf);
+    table(["Perfil", "Listas", "Marmitas", "Nomes", "Entregues", "Canhotos", "Diverg."], ids.map(id => { const o = A.perf[id]; return [cut(ckNome(id), 28), o.listas, o.marm, o.nomes, o.ent, o.canh, o.div]; }),
+      [50, 18, 24, 22, 24, 20, 16], ["l", "r", "r", "r", "r", "r", "r"], ["Total", A.listas, A.marm, A.nomes, A.ent, A.canh, A.div]);
+
+    h2("Entregas por dia");
+    table(["Data", "Perfil", "Marmitas", "Entregues", "Início", "Fim", "Duração"], docs.map(d => { const its = admNamed(d);
+      return [`${DIAS3[parse(d.data).getDay()]} ${short(d.data)}`, cut(ckNome(d.perfil), 24), sum(its, x => x.marmitas), `${its.filter(x => x.entregue).length}/${its.length}`,
+        admIni(d) ? hhmm(admIni(d)) : "–", admFim(d) ? hhmm(admFim(d)) : "–", admFim(d) ? fmtDur(admDurMs(d)) : "–"]; }),
+      [26, 44, 22, 26, 16, 16, 24], ["l", "l", "r", "r", "r", "r", "r"]);
+
+    h2("Detalhe das entregas");
+    docs.forEach(d => {
+      ensure(24); pdf.setFont("helvetica", "bold"); pdf.setFontSize(9.5); pdf.text(`${DIAS3[parse(d.data).getDay()]} ${fmtDate(d.data)} · ${ckNome(d.perfil)}`, L, y); y += 5.5; pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+      const its = admNamed(d);
+      table(["Nome", "Marmitas", "Conf.", "Entr.", "Canhoto"], its.map(x => { const c = x.comprovante;
+        return [cut(x.nome.trim(), 34), x.marmitas || 0, x.conferida ? "Sim" : "Não", x.entregue ? "Sim" : "Não",
+          c ? cut(`${c.recebedor} ${hhmm(c.em)}${c.divergencia ? ` | conferiu ${c.quantidade}` : ""}`, 34) : "-"]; }),
+        [62, 22, 16, 16, 58], ["l", "r", "r", "r", "l"], ["Total", sum(its, x => x.marmitas), "", "", ""]);
+    });
+    admDownload(`relatorio-checklist-${m}.pdf`, pdf.output("arraybuffer"), "application/pdf");
+  }
+  function renderAdmRel() {
+    admHead("adm-rel");
+    const body = $("admBodyR"); body.textContent = "";
+    if (!adm.loadedPM || !adm.loadedCK) { body.append(admEmpty("Carregando…")); return; }
+    const m = monthOf(adm.ref), a = `${m}-01`, b = `${m}-${pad(daysIn(m))}`, A = admAgg(a, b);
+    const pill = (t, c) => el("span", { class: "pill lg " + (c || "") }, t);
+    const btn = (txt, cls, fn, dis) => { const x = el("button", { type: "button", class: cls, onclick: fn }, txt); if (dis) x.disabled = true; return x; };
+    const grid = el("div", { class: "adm-grid" });
+    grid.append(
+      admCard("Posto da Mata", el("div", { class: "rep-card" },
+        el("div", { class: "sum" }, pill(`${A.caixas} caixas`, "rel"), pill(`G ${A.g}`), pill(`M ${A.m}`), pill(plural(A.diasPM, "dia", "dias") + " com entrega")),
+        el("div", { class: "adm-actions", style: "grid-template-columns:1fr" }, btn("Baixar relatório (PDF)", "primary", admPmPdf, !A.pm.length)),
+        el("p", { class: "note", style: "margin:0" }, "O PDF traz o resumo de caixas, os registros com data e hora, e os valores. A tela do painel mostra só quantidades."))),
+      admCard("Checklist de entregas", el("div", { class: "rep-card" },
+        el("div", { class: "sum" }, pill(`${A.marm} marmitas`, "rel"), pill(plural(A.nomes, "nome", "nomes")), pill(`${A.ent} entregues`, "ok"), pill(`${A.fin}/${A.listas} finalizadas`)),
+        el("div", { class: "adm-actions" }, btn("Baixar relatório (PDF)", "primary", admCkPdf, !A.docs.length), btn("Baixar planilha", "ghost", admCkCsv, !A.docs.length)),
+        el("p", { class: "note", style: "margin:0" }, "Resumo por perfil, entregas por dia com início, fim e duração, e o detalhe de cada nome com o canhoto. O checklist não tem valores."))));
+    body.append(grid, el("div", { class: "status", id: "admRepStatus", role: "status" }));
+  }
+
+  // ---------- acesso do usuário ADM (só o dono, em Ajustes) ----------
+  function renderAdmAcesso() {
+    const box = $("admList"); box.textContent = "";
+    if (!adm.access.length) box.append(el("span", { class: "muted" }, "Nenhum usuário ADM liberado."));
+    adm.access.forEach(email => box.append(el("div", { class: "tline" },
+      el("div", { class: "t" }, el("b", {}, email), el("small", {}, "ADM Entregas · só leitura")),
+      el("button", { type: "button", class: "ghost", onclick: () => removeAdm(email) }, "Remover"))));
+    $("admForm").querySelector("button[type=submit]").disabled = adm.access.length >= 1;
+  }
+  $("admForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const email = $("admEmail").value.trim().toLowerCase();
+    if (adm.access.length >= 1) { setStatus("admStatus", "Já existe um usuário ADM. Remova o atual para liberar outro.", true); return; }
+    if (!/^[^@\s/]+@[^@\s/]+\.[^@\s/]+$/.test(email)) { setStatus("admStatus", "Digite um e-mail válido.", true); return; }
+    if (email === state.email) { setStatus("admStatus", "Esse é o seu e-mail. Coloque o e-mail da outra pessoa.", true); return; }
+    try {
+      await state.fs.collection("adm").doc(email).set({ owner: state.uid, criadoEm: new Date().toISOString() });
+      $("admEmail").value = "";
+      setStatus("admStatus", `Acesso liberado para ${email}. Mande o link do ADM Entregas para essa pessoa.`);
+    } catch { setStatus("admStatus", "Não foi possível liberar. Confira se as regras novas do Firestore foram publicadas.", true); }
+  });
+  async function removeAdm(email) {
+    try { await state.fs.collection("adm").doc(email).delete(); setStatus("admStatus", `Acesso de ${email} removido.`); }
+    catch { setStatus("admStatus", "Não foi possível remover. Tente de novo.", true); }
+  }
+
   // ---------- AJUSTES: custos fixos e sócio ----------
   let fxDraft = [];
   function fillFixForm() { fxDraft = state.fixos.map(x => ({ id: x.id, nome: x.nome, valor: x.valor, area: x.area || "PM" })); renderFx(); }
@@ -3262,6 +3731,9 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
       if (state.ck.dragging || $("ckRows").contains(document.activeElement)) ckTotals(); else renderCk();
     }
     else if (state.view.startsWith("fin")) renderFin();
+    else if (ADM_VIEWS.includes(state.view)) {
+      if (state.view === "adm") renderAdmPainel(); else if (state.view === "adm-entregas") renderAdmEntregas(); else renderAdmRel();
+    }
     if (APP === "tr" && !state.partner) finSync();
   }
 
@@ -3293,9 +3765,13 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
   function startApp(db, uid) {
     state.db = db; state.uid = uid;
     loadTimer = setTimeout(() => setStatus("globalStatus", "Os dados ainda não carregaram. Verifique a conexão.", true), 10000);
+    if (APP === "adm") { startAdm(db, false); updateChrome(); return; }
     startFinance(db);
     updateChrome();
     if (APP === "fin") { route(); return; }
+    // publica nome do cliente e do prestador para o usuário ADM gerar relatórios (sem preços)
+    let relMirror = "";
+    state.fs.collection("adm").where("owner", "==", state.uid).onSnapshot(s => { adm.access = s.docs.map(d => d.id); if (state.view === "ajustes") renderAdmAcesso(); }, () => {});
     db.collection("custos").limit(1000).onSnapshot(s => { state.custos = toList(s); state.loadedCustos = true; renderAll(); }, () => {});
     db.collection("fixos").onSnapshot(s => {
       state.fixos = toList(s).sort(byOrdem);
@@ -3307,6 +3783,8 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
       const d = s.exists ? s.data() : {};
       if (!s.metadata.fromCache && !d.fixosIniciados && !seeded) { seeded = true; seedFixos(); }
       state.cfg = { ...DEFAULT_CFG, ...d, precos: { ...DEFAULT_CFG.precos, ...(d.precos || {}) }, destinos: Array.isArray(d.destinos) ? d.destinos : DEFAULT_CFG.destinos };
+      const rk = JSON.stringify([state.cfg.cliente || "", state.cfg.prestador || ""]);
+      if (!s.metadata.fromCache && rk !== relMirror) { relMirror = rk; db.doc("config/relatorio").set({ cliente: state.cfg.cliente || "", prestador: state.cfg.prestador || "" }).catch(() => {}); }
       if (state.view === "ajustes" && !document.activeElement?.closest("#cfgForm")) fillCfgForm();
       renderAll();
     }, () => {});
@@ -3399,16 +3877,25 @@ body.sheet-open .bg-fx .blob,body.sheet-open .bg-fx .edge::after{animation-play-
       if (started) return; started = true;
       const email = (u.email || "").toLowerCase();
       state.fs = fs; state.email = email;
-      let owner = null;
+      let owner = null, admOwner = null;
       try {
         const s = await fs.collection("socios").doc(email).get();
         if (s.exists && s.data().owner && s.data().owner !== u.uid) owner = s.data().owner;
       } catch {}
+      try {
+        const a = await fs.collection("adm").doc(email).get();
+        if (a.exists && a.data().owner && a.data().owner !== u.uid) admOwner = a.data().owner;
+      } catch {}
+      // cada pessoa só entra no app que foi liberado para ela
+      const deny = async msg => { started = false; $("boot").hidden = true; $("app").hidden = true; $("login").hidden = false; setStatus("lgStatus", msg, true); await auth.signOut(); };
+      if (APP === "adm" && !admOwner && owner) { deny("Seu acesso não inclui o ADM Entregas. Peça ao responsável para liberar."); return; }
+      if (APP !== "adm" && admOwner && !owner) { deny("Esta conta é do ADM Entregas. Abra o link do ADM Entregas para entrar."); return; }
       $("boot").hidden = true; $("login").hidden = true; $("app").hidden = false;
       $("userEmail").textContent = email;
-      const root = fs.collection("usuarios").doc(owner || u.uid);
+      const root = fs.collection("usuarios").doc((APP === "adm" ? admOwner : owner) || u.uid);
       const db = { collection: n => root.collection(n), doc: p => { const [c, id] = p.split("/"); return root.collection(c).doc(id); } };
-      if (owner) startPartner(db); else startApp(db, u.uid);
+      if (APP === "adm" && admOwner) { updateChrome(); startAdm(db, true); }
+      else if (owner) startPartner(db); else startApp(db, u.uid);
     });
     const MSG = {
       "auth/invalid-credential": "E-mail ou senha incorretos.", "auth/wrong-password": "E-mail ou senha incorretos.",
