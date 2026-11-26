@@ -34,8 +34,13 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- abertura rápida: abre as conexões antes de precisar delas -->
+<link rel="preconnect" href="https://www.gstatic.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- a fonte chega sem segurar a primeira tela (até lá vale a fonte do sistema) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
 <style>
 /* SPLOG · visual inspirado no iOS: fonte do sistema (SF no Apple, Inter nos demais), listas agrupadas em cartões brancos sobre cinza, controles segmentados e barra de abas inferior */
 :root{
@@ -288,6 +293,9 @@ ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;f
 .login-card .linkbtn{font-size:15px;align-self:center}
 .boot{display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--muted);padding-top:30vh}
 .boot .logo{font-size:44px}
+.boot-bar{width:132px;height:4px;border-radius:4px;background:color-mix(in srgb,var(--accent) 16%,transparent);overflow:hidden;position:relative}
+.boot-bar i{position:absolute;inset:0;width:40%;border-radius:4px;background:var(--grad,var(--accent))}
+#bootMsg{font-size:14px;min-height:1.3em}
 @media (prefers-reduced-motion:no-preference){.boot .logo i{animation:blink 1.2s ease-in-out infinite}@keyframes blink{50%{opacity:.25}}}
 .partner-only{display:none!important}
 body.partner .partner-only{display:inline-flex!important}
@@ -597,6 +605,34 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
 .cksub .linkbtn{font-size:12.5px;padding:2px 0;font-weight:500}
 .cksub .cnbtn{border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;margin:4px 0;cursor:pointer}
 .cksub .cnbtn:active{transform:scale(.96)}
+/* animações leves: abertura, troca de seção e toque (desligadas para quem pede menos movimento) */
+@media (prefers-reduced-motion:no-preference){
+  /* a abertura aparece na hora: só movimento (transform), que anda mesmo com o celular ocupado */
+  .boot .logo{animation:a-pop .55s cubic-bezier(.2,.9,.3,1.2) both}
+  .boot-bar i{animation:a-load 1.1s ease-in-out infinite;will-change:transform}
+  .boot.out{animation:a-out .26s ease-in forwards}
+  #app:not([hidden]),.login:not([hidden]){animation:a-rise .45s cubic-bezier(.2,.8,.2,1) both}
+  section.enter > *,section.enter .adm-grid > *,section.enter .adm-kpis > *{animation:a-rise .42s cubic-bezier(.2,.8,.2,1) both}
+  section.enter > :nth-child(2),section.enter .adm-grid > :nth-child(2),section.enter .adm-kpis > :nth-child(2){animation-delay:.04s}
+  section.enter > :nth-child(3),section.enter .adm-grid > :nth-child(3),section.enter .adm-kpis > :nth-child(3){animation-delay:.08s}
+  section.enter > :nth-child(4),section.enter .adm-grid > :nth-child(4),section.enter .adm-kpis > :nth-child(4){animation-delay:.12s}
+  section.enter > :nth-child(5),section.enter .adm-grid > :nth-child(5){animation-delay:.16s}
+  section.enter > :nth-child(n+6),section.enter .adm-grid > :nth-child(n+6){animation-delay:.2s}
+  .empty.loading{animation:a-breathe 1.4s ease-in-out infinite}
+  :where(nav.views a) svg{transition:transform .2s cubic-bezier(.2,.9,.3,1.3)}
+  :where(nav.views a[aria-current="page"]) svg{transform:translateY(-1px) scale(1.08)}
+  :where(nav.views a:active) svg{transform:scale(.88)}
+  :where(button:not(:disabled),.ghost,.chip){transition:transform .12s ease,background-color .15s ease,box-shadow .15s ease,opacity .15s ease}
+  :where(button:not(:disabled):not(.grip),a.ghost,.chip):active{transform:scale(.96)}
+  .seg-ctl button[aria-pressed="true"]{animation:a-press .25s ease-out}
+}
+@keyframes a-fade{from{opacity:0}}
+@keyframes a-out{to{opacity:0;transform:scale(.98)}}
+@keyframes a-pop{from{transform:scale(.9)}}
+@keyframes a-rise{from{opacity:0;transform:translateY(10px)}}
+@keyframes a-load{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+@keyframes a-breathe{50%{opacity:.45}}
+@keyframes a-press{from{transform:scale(.95)}}
 /* atalhos: itens de painel que levam à seção correspondente */
 .go{cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;transition:background-color .15s ease,transform .12s ease,filter .15s ease}
 .go:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:2px}
@@ -729,7 +765,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     <div class="status" id="lgStatus" role="status"></div>
   </form>
 </div>
-<div class="boot" id="boot"><span class="logo" aria-label="SPLOG">SPLOG<i aria-hidden="true"></i></span><span>Carregando…</span></div>
+<div class="boot" id="boot"><span class="logo" aria-label="SPLOG">SPLOG<i aria-hidden="true"></i></span><span class="boot-bar" aria-hidden="true"><i></i></span><span id="bootMsg" role="status">Carregando…</span></div>
 
 <div class="wrap" id="app" hidden>
   <header>
@@ -938,7 +974,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
 
     <section class="panel" aria-labelledby="dayTitle">
       <div class="panel-head"><h2 id="dayTitle">Entregas do dia</h2><button class="ghost" type="button" id="copyDay">Copiar resumo</button></div>
-      <div class="list" id="dayList"><div class="empty">Carregando…</div></div>
+      <div class="list" id="dayList"><div class="empty loading">Carregando…</div></div>
       <div class="totals"><span>Total do dia</span><span class="num" id="dayTotal">R$ 0,00</span></div>
     </section>
   </section>
@@ -946,15 +982,15 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   <!-- ===================== ADM ENTREGAS ===================== -->
   <section id="v-adm" class="wrap" style="gap:18px" hidden>
     <div id="admHead"></div>
-    <div id="admBody" class="wrap" style="gap:16px"><div class="empty">Carregando…</div></div>
+    <div id="admBody" class="wrap" style="gap:16px"><div class="empty loading">Carregando…</div></div>
   </section>
   <section id="v-adm-entregas" class="wrap" style="gap:18px" hidden>
     <div id="admHeadE"></div>
-    <div id="admBodyE" class="wrap" style="gap:16px"><div class="empty">Carregando…</div></div>
+    <div id="admBodyE" class="wrap" style="gap:16px"><div class="empty loading">Carregando…</div></div>
   </section>
   <section id="v-adm-rel" class="wrap" style="gap:18px" hidden>
     <div id="admHeadR"></div>
-    <div id="admBodyR" class="wrap" style="gap:16px"><div class="empty">Carregando…</div></div>
+    <div id="admBodyR" class="wrap" style="gap:16px"><div class="empty loading">Carregando…</div></div>
   </section>
 
   <!-- ===================== CHECKLIST DE ENTREGAS ===================== -->
@@ -1048,7 +1084,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
 
     <section class="panel" aria-labelledby="costTitle">
       <h2 id="costTitle">Custos registrados</h2>
-      <div class="list" id="costList"><div class="empty">Carregando…</div></div>
+      <div class="list" id="costList"><div class="empty loading">Carregando…</div></div>
       <div class="totals"><span>Total de custos do mês</span><span class="num" id="costTotal">R$ 0,00</span></div>
     </section>
   </section>
@@ -1343,7 +1379,6 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     </div>
   </div>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1420,6 +1455,14 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   const desc = e => e.tipo === "PM" ? [e.g ? `${e.g} G` : "", e.m ? `${e.m} M` : ""].filter(Boolean).join(" + ") || "0 caixas"
     : e.tipo === "PED" ? (e.veiculo === "moto" ? "Moto" : "Carro da empresa") : (e.destino || "Entrega");
 
+  // ---------- abertura ----------
+  const bootMsg = t => { const n = $("bootMsg"); if (n) n.textContent = t; };
+  function bootDone() {
+    const b = $("boot"); if (b.hidden) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { b.hidden = true; return; }
+    b.classList.add("out"); setTimeout(() => { b.hidden = true; b.classList.remove("out"); }, 260);
+  }
+
   // ---------- routing ----------
   const FIN_VIEWS = ["fin", "fin-lancar", "fin-orcamento", "fin-metas"];
   const ADM_VIEWS = ["adm", "adm-entregas", "adm-rel"];
@@ -1449,11 +1492,20 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     if (state.view === "fin-orcamento" && prev !== state.view) state.foMonth = null;
     updateChrome();
     VIEWS.forEach(v => { $("v-" + v).hidden = v !== state.view; });
+    if (prev !== state.view || !route.once) viewEnter($("v-" + state.view));
+    route.once = true;
     $$("nav.views a").forEach(a => a.setAttribute("aria-current", a.dataset.view === state.view ? "page" : "false"));
     if (state.view === "ajustes") { fillCfgForm(); fillFixForm(); renderAcesso(); renderAdmAcesso(); }
     renderAll();
   }
   window.addEventListener("hashchange", route);
+  // a seção que entra sobe e aparece em cascata; a classe sai sozinha para não animar a cada atualização
+  function viewEnter(sec) {
+    if (!sec || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    clearTimeout(viewEnter.t); $$("section.enter").forEach(x => x.classList.remove("enter"));
+    void sec.offsetWidth; sec.classList.add("enter");
+    viewEnter.t = setTimeout(() => sec.classList.remove("enter"), 900);
+  }
   $$("[data-mod]").forEach(b => b.onclick = () => { location.hash = b.dataset.mod === "fin" ? (state.lastFin || "fin") : (state.lastTr || "painel"); });
 
   // ---------- atalhos: itens dos painéis levam à seção correspondente ----------
@@ -1744,7 +1796,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const list = $("dayList"); list.textContent = "";
     $("dayTitle").textContent = `Entregas de ${fmtDate(state.day).slice(0,5)}`;
     const items = [...state.dayEntries].sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
-    if (!state.loadedDay) list.append(el("div", { class: "empty" }, "Carregando…"));
+    if (!state.loadedDay) list.append(el("div", { class: "empty loading" }, "Carregando…"));
     else if (!items.length) list.append(el("div", { class: "empty" }, "Nenhuma entrega neste dia. Registre a primeira no formulário acima."));
     items.forEach(it => {
       const confirming = state.pendingDel === it.id;
@@ -1867,7 +1919,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       el("span", {}, `Cliente: ${state.cfg.cliente || "(defina em Ajustes)"}`),
       el("span", {}, `Prestador: ${state.cfg.prestador || "(defina em Ajustes)"}`),
       el("span", {}, `Período: ${periodo()}`)));
-    if (!state.loadedMonth) { doc.append(el("div", { class: "empty" }, "Carregando…")); return; }
+    if (!state.loadedMonth) { doc.append(el("div", { class: "empty loading" }, "Carregando…")); return; }
     if (!R.pm.length && !R.ot.length) { doc.append(el("div", { class: "empty" }, `Nenhuma entrega${SCOPES[state.repScope] ? " de " + SCOPES[state.repScope] : ""} neste mês.`)); return; }
 
     const sec = (title, color) => el("h4", { class: "sec" }, el("i", { class: "dot", style: `background:${color}` }), title);
@@ -1964,6 +2016,29 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     rows.push(["", "", "", "TOTAL A RECEBER", "", "", num(R.total), ""]);
     saveFile(`${fileBase()}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n"));
   };
+
+  // ================= PDF: gerador carregado sob demanda =================
+  // O jsPDF é grande e só serve para PDF: ele baixa depois que o app abre (em segundo plano)
+  // ou na hora do primeiro PDF. Quem toca em "Baixar PDF" antes disso espera só o download.
+  const JSPDF_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+  let jspdfLoad = null;
+  function loadJspdf() {
+    if (window.jspdf) return Promise.resolve();
+    return jspdfLoad || (jspdfLoad = new Promise((ok, fail) => {
+      const sc = document.createElement("script"); sc.src = JSPDF_URL; sc.async = true;
+      sc.onload = () => window.jspdf ? ok() : fail(); sc.onerror = () => { jspdfLoad = null; sc.remove(); fail(); };
+      document.head.append(sc);
+    }));
+  }
+  // true = pode gerar agora; false = está baixando e chama "retry" quando terminar
+  function pdfReady(retry, msg) {
+    if (window.jspdf) return true;
+    msg("Preparando o gerador de PDF…", false);
+    loadJspdf().then(() => { msg("", false); retry(); }, () => msg("O gerador de PDF não carregou. Verifique a conexão e tente de novo.", true));
+    return false;
+  }
+  // depois que o app abre e fica parado, já deixa o gerador pronto
+  const idle = fn => ("requestIdleCallback" in window ? requestIdleCallback(fn, { timeout: 6000 }) : setTimeout(fn, 2500));
 
   // ================= PDF: layout comum (A4, minimalista) =================
   // Cabeçalho com a marca, cartões de resumo, tabelas em 1 ou 2 colunas e rodapé com página.
@@ -2122,7 +2197,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   }
 
   const repPdf = () => {
-    if (!window.jspdf) { setStatus("repStatus", "O gerador de PDF não carregou. Verifique a conexão e recarregue.", true); return; }
+    if (!pdfReady(repPdf, (t, e) => setStatus("repStatus", t, e))) return;
     const R = reportData();
     if (!R.pm.length && !R.ot.length) { setStatus("repStatus", `Não há entregas${SCOPES[state.repScope] ? " de " + SCOPES[state.repScope] : ""} neste mês para gerar o PDF.`, true); return; }
     const k = pdfKit({ kind: "Relatório mensal", title: `${SCOPES[state.repScope] || "Relatório de entregas"} · ${monthLabel(state.month)}`,
@@ -2307,7 +2382,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     $("fPreco").textContent = s.preco ? BRL(s.preco) : "–";
     $("fKm").textContent = s.km ? `${num2(s.km, 0)} km` : "–";
     const list = $("fuelList"); list.textContent = "";
-    if (!state.loadedCustos) list.append(el("div", { class: "empty" }, "Carregando…"));
+    if (!state.loadedCustos) list.append(el("div", { class: "empty loading" }, "Carregando…"));
     else if (!s.rows.length) list.append(el("div", { class: "empty" }, "Nenhum abastecimento neste mês."));
     [...s.rows].reverse().forEach(r => list.append(linkTo(costItem(r, false), goCus("combustivel", "costTitle"), "gorow", "Ver em Custos")));
   }
@@ -2364,7 +2439,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const rowsF = fuelRows().filter(f => monthOf(f.data) === m);
     const esp = state.custos.filter(c => c.categoria === "esporadico" && monthOf(c.data) === m);
     const items = [...rowsF, ...esp].sort((a, b) => b.data.localeCompare(a.data) || (b.criadoEm || "").localeCompare(a.criadoEm || ""));
-    if (!state.loadedCustos) list.append(el("div", { class: "empty" }, "Carregando…"));
+    if (!state.loadedCustos) list.append(el("div", { class: "empty loading" }, "Carregando…"));
     else if (!items.length) list.append(el("div", { class: "empty" }, "Nenhum abastecimento ou gasto neste mês. Use o formulário acima."));
     items.forEach(it => list.append(costItem(it, true)));
     const fixos = m <= monthOf(todayIso()) ? state.fixos : [];
@@ -2630,7 +2705,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     $("flTitle").textContent = `Lançamentos de ${monthLabel(m)}`;
     const items = [...f.L].sort((a, b) => (b.data + (b.criadoEm || "")).localeCompare(a.data + (a.criadoEm || "")));
     if (f.imp) list.append(autoItem(f));
-    if (!state.finLoaded) list.append(el("div", { class: "empty" }, "Carregando…"));
+    if (!state.finLoaded) list.append(el("div", { class: "empty loading" }, "Carregando…"));
     else if (!items.length && !f.imp) list.append(el("div", { class: "empty" }, "Nenhum lançamento neste mês."));
     items.forEach(x => list.append(finItem(x, true)));
     $("flTotal").textContent = BRL(f.recReal - f.despReal);
@@ -3142,7 +3217,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     }, v => v === "__novo" ? "+ Novo perfil" : ckNome(v));
     const box = $("ckRows"); box.textContent = "";
     const itens = ckItens();
-    if (!ck.loaded) box.append(el("div", { class: "empty" }, "Carregando…"));
+    if (!ck.loaded) box.append(el("div", { class: "empty loading" }, "Carregando…"));
     else if (!itens.length) box.append(el("div", { class: "empty" }, "Nenhuma entrega nesta lista. Toque em + Adicionar entrega."));
     itens.forEach(it => box.append(ckRow(it)));
     ckTotals();
@@ -3193,8 +3268,8 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     try { downloadFile(filename, data, type); setStatus("ckStatus", `Arquivo ${filename} baixado.`); }
     catch { setStatus("ckStatus", "Não foi possível baixar o arquivo. Tente de novo.", true); }
   }
-  $("ckPdf").onclick = () => {
-    if (!window.jspdf) { setStatus("ckStatus", "O gerador de PDF não carregou. Verifique a conexão e recarregue.", true); return; }
+  $("ckPdf").onclick = function ckPdf() {
+    if (!pdfReady(ckPdf, (t, e) => setStatus("ckStatus", t, e))) return;
     const linhas = ckLinhas();
     if (!linhas.length) { setStatus("ckStatus", "Adicione entregas antes de baixar o relatório.", true); return; }
     const day = state.ck.day, nome = ckNome(state.ck.perfil);
@@ -3399,10 +3474,10 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       $("cnPdf").disabled = false;
     } catch { body.textContent = "Não foi possível abrir o comprovante. Verifique a conexão."; }
   }
-  $("cnPdf").onclick = () => {
+  $("cnPdf").onclick = function cnPdf() {
     const c = cn.view;
     if (!c) return;
-    if (!window.jspdf) { setStatus("cnViewStatus", "O gerador de PDF não carregou. Recarregue a página.", true); return; }
+    if (!pdfReady(cnPdf, (t, e) => setStatus("cnViewStatus", t, e))) return;
     const when = toIso(c.servidor) || c.criadoEm, dt = new Date(when), srv = toIso(c.servidor) && c.srvOk !== false;
     const k = pdfKit({ kind: "Comprovante de entrega", title: c.nome, meta: [`${c.perfilNome}`, fmtDate(c.data)] });
     const { pdf, M, W, C } = k;
@@ -3749,6 +3824,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     try { downloadFile(filename, data, type); admRepMsg(`Arquivo ${filename} baixado.`); } catch { admRepMsg("Não foi possível baixar o arquivo. Tente de novo.", true); }
   }
   function admPmPdf() {
+    if (!pdfReady(admPmPdf, admRepMsg)) return;
     const m = monthOf(adm.ref);
     if (!adm.pm.some(e => monthOf(e.data) === m)) { admRepMsg("Não há entregas do PM neste mês para gerar o PDF.", true); return; }
     state.month = m; state.monthEntries = adm.pm.filter(e => monthOf(e.data) === m); state.loadedMonth = true; state.repScope = "PM";
@@ -3771,7 +3847,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     admDownload(`checklist-${m}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n"), "text/csv;charset=utf-8");
   }
   function admCkPdf() {
-    if (!window.jspdf) { admRepMsg("O gerador de PDF não carregou. Verifique a conexão e recarregue.", true); return; }
+    if (!pdfReady(admCkPdf, admRepMsg)) return;
     const docs = admCkDocs(), m = monthOf(adm.ref), a = `${m}-01`, b = `${m}-${pad(daysIn(m))}`;
     if (!docs.length) { admRepMsg("Não há entregas do checklist neste mês para gerar o PDF.", true); return; }
     const A = admAgg(a, b);
@@ -4135,12 +4211,13 @@ body.adm-viewer .adm-only{display:inline-flex!important}
 
   (() => {
     const cfg = window.FIREBASE_CONFIG;
-    const showLogin = () => { $("boot").hidden = true; $("app").hidden = true; $("login").hidden = false; };
+    const showLogin = () => { bootDone(); $("app").hidden = true; $("login").hidden = false; };
     if (!window.firebase || !cfg || !cfg.apiKey || cfg.apiKey.startsWith("COLE")) {
       showLogin(); $("lgBtn").disabled = true;
       setStatus("lgStatus", !window.firebase ? "Não foi possível carregar o login. Verifique a internet e recarregue." : "Falta configurar o arquivo config.js com os dados do seu projeto Firebase.", true);
       return;
     }
+    bootMsg("Conectando…");
     firebase.initializeApp(cfg);
     const auth = firebase.auth(), fs = firebase.firestore();
     fs.enablePersistence({ synchronizeTabs: true }).catch(() => {});
@@ -4150,21 +4227,38 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       if (started) return; started = true;
       const email = (u.email || "").toLowerCase();
       state.fs = fs; state.email = email;
-      let owner = null, admOwner = null;
-      try {
-        const s = await fs.collection("socios").doc(email).get();
-        if (s.exists && s.data().owner && s.data().owner !== u.uid) owner = s.data().owner;
-      } catch {}
-      try {
-        const a = await fs.collection("adm").doc(email).get();
-        if (a.exists && a.data().owner && a.data().owner !== u.uid) admOwner = a.data().owner;
-      } catch {}
+      // tipo de acesso (dono, sócio ou ADM): as duas consultas vão juntas
+      const consultar = async () => {
+        let erro = false;
+        const [s, a] = await Promise.all([
+          fs.collection("socios").doc(email).get().catch(() => { erro = true; return null; }),
+          fs.collection("adm").doc(email).get().catch(() => { erro = true; return null; })]);
+        const dono = d => d && d.exists && d.data().owner && d.data().owner !== u.uid ? d.data().owner : null;
+        return { owner: dono(s), admOwner: dono(a), erro };
+      };
+      // abre na hora com o acesso guardado neste aparelho e confere com o servidor por trás;
+      // se mudou (ex.: acesso liberado ou retirado), guarda o novo e recarrega
+      const ACC = "splog.acesso." + u.uid, guardado = lsGet(ACC, null);
+      let acc = guardado;
+      if (!acc) {
+        bootMsg("Verificando o acesso…");
+        acc = await consultar();
+        if (!acc.erro) lsSet(ACC, { owner: acc.owner, admOwner: acc.admOwner });
+      } else {
+        consultar().then(f => {
+          if (f.erro) return;
+          lsSet(ACC, { owner: f.owner, admOwner: f.admOwner });
+          if ((f.owner || null) !== (guardado.owner || null) || (f.admOwner || null) !== (guardado.admOwner || null)) location.reload();
+        }).catch(() => {});
+      }
+      const owner = acc.owner || null, admOwner = acc.admOwner || null;
       // cada pessoa só entra no app que foi liberado para ela
-      const deny = async msg => { started = false; $("boot").hidden = true; $("app").hidden = true; $("login").hidden = false; setStatus("lgStatus", msg, true); await auth.signOut(); };
+      const deny = async msg => { started = false; try { localStorage.removeItem(ACC); } catch {} $("boot").hidden = true; $("app").hidden = true; $("login").hidden = false; setStatus("lgStatus", msg, true); await auth.signOut(); };
       if (APP === "adm" && !admOwner && owner) { deny("Seu acesso não inclui o ADM Entregas. Peça ao responsável para liberar."); return; }
       if (APP !== "adm" && admOwner && !owner) { deny("Esta conta é do ADM Entregas. Abra o link do ADM Entregas para entrar."); return; }
-      $("boot").hidden = true; $("login").hidden = true; $("app").hidden = false;
+      bootDone(); $("login").hidden = true; $("app").hidden = false;
       $("userEmail").textContent = email;
+      idle(() => loadJspdf().catch(() => {}));
       const root = fs.collection("usuarios").doc((APP === "adm" ? admOwner : owner) || u.uid);
       const db = { collection: n => root.collection(n), doc: p => { const [c, id] = p.split("/"); return root.collection(c).doc(id); } };
       if (APP === "adm" && admOwner) { updateChrome(); startAdm(db, true); }
