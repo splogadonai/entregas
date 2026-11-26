@@ -596,6 +596,25 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
 .cksub .linkbtn{font-size:12.5px;padding:2px 0;font-weight:500}
 .cksub .cnbtn{border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;margin:4px 0;cursor:pointer}
 .cksub .cnbtn:active{transform:scale(.96)}
+/* atalhos: itens de painel que levam à seção correspondente */
+.go{cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;transition:background-color .15s ease,transform .12s ease,filter .15s ease}
+.go:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:2px}
+.go.gorow{padding-right:22px;border-radius:12px}
+.go.gorow:hover{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.go.gorow:active{background:color-mix(in srgb,var(--accent) 11%,transparent)}
+.go.gorow::after{content:"›";position:absolute;right:6px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:20px;line-height:1;font-weight:400;pointer-events:none}
+.go.gobox{padding-right:max(26px,var(--pr,0px))}
+.go.gobox:active{transform:scale(.985)}
+.go.gobox:not(.panel):not(.kpi){border-radius:12px}
+.go.gobox:not(.panel):not(.kpi):hover{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.panel.go.gobox:not(.hero):hover,.kpi.go.gobox:hover{background:color-mix(in srgb,var(--accent) 5%,var(--panel))}
+.hero.go:hover{filter:brightness(1.05)}
+.go-chev{position:absolute;right:12px;top:10px;color:var(--muted);font-size:20px;line-height:1;pointer-events:none}
+.hero .go-chev{color:rgba(255,255,255,.85)}
+tr.go{cursor:pointer}
+tr.go:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+tr.go td:last-child::after{content:" ›";color:var(--muted)}
+.caplink{font-size:inherit;padding:0 0 0 4px;font-weight:600}
 .ckrow input[readonly]{opacity:.75}
 .ckrow .x:disabled{opacity:.3;cursor:default}
 .sheet-back{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,6,24,.58);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
@@ -1436,6 +1455,40 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   window.addEventListener("hashchange", route);
   $$("[data-mod]").forEach(b => b.onclick = () => { location.hash = b.dataset.mod === "fin" ? (state.lastFin || "fin") : (state.lastTr || "painel"); });
 
+  // ---------- atalhos: itens dos painéis levam à seção correspondente ----------
+  // prepara o que a seção precisa (tipo, mês, dia) e abre; "alvo" rola até um bloco da seção
+  function goView(view, prep, alvo) {
+    prep?.();
+    if (location.hash.slice(1) === view) route(); else location.hash = view;
+    if (alvo) setTimeout(() => $(alvo)?.scrollIntoView({ behavior: "smooth", block: "start" }), 140);
+  }
+  // liga (ou desliga, com go vazio) o toque num item; botões e campos de dentro continuam com a função deles
+  function linkTo(node, go, kind, label) {
+    if (!node) return node;
+    if (!go) {
+      if (node.classList.contains("go")) {
+        node.classList.remove("go", "gorow", "gobox"); ["role", "tabindex", "title"].forEach(a => node.removeAttribute(a));
+        node.querySelector(":scope > .go-chev")?.remove();
+        node.onclick = null; node.onkeydown = null;
+      }
+      return node;
+    }
+    node.classList.add("go"); if (kind) node.classList.add(kind);
+    if (kind === "gobox" && !node.querySelector(":scope > .go-chev")) node.append(el("span", { class: "go-chev", "aria-hidden": "true" }, "›"));
+    if (node.tagName !== "TR") node.setAttribute("role", "link");
+    node.tabIndex = 0;
+    if (label) node.title = label;
+    node.onclick = e => { const c = e.target.closest("button, a, input, select, textarea, label, summary"); if (c && c !== node && node.contains(c)) return; go(); };
+    node.onkeydown = e => { if (e.target === node && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(); } };
+    return node;
+  }
+  const trLinks = (node, gos) => { node?.querySelectorAll?.("tbody tr").forEach((tr, i) => gos[i] && linkTo(tr, gos[i])); return node; };
+  // Transporte: só para o dono (o sócio vê apenas o painel)
+  const navTr = () => APP === "tr" && !state.partner;
+  const goRel = scope => navTr() ? () => goView("relatorio", () => { state.repScope = scope; lsSet("ct.repScope", scope); }) : null;
+  const goReg = (tipo, d) => navTr() ? () => goView("registrar", () => { if (tipo) { state.tipo = tipo; lsSet("ct.tipo", tipo); } setDay(d || todayIso()); }) : null;
+  const goCus = (tipo, alvo) => navTr() ? () => goView("custos", () => { if (tipo) { state.cTipo = tipo; lsSet("ct.ctipo", tipo); } }, alvo) : null;
+
   // ---------- PAINEL ----------
   function weekRange() { const t = todayIso(), dow = (parse(t).getDay() + 6) % 7, mon = addDays(t, -dow); return [mon, addDays(mon, 6)]; }
   const weekOf = ds => addDays(ds, -((parse(ds).getDay() + 6) % 7));
@@ -1487,7 +1540,8 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     wks.forEach(w => {
       const es = w.es, paid = !!state.weeks[w.mon]?.pago;
       wl.append(el("div", { class: "wk" + (w.mon === ws ? " now" : "") },
-        el("div", { class: "t" }, el("b", {}, wkLabel(w)), el("small", {}, es.length ? plural(es.length, "entrega", "entregas") : "Sem entregas")),
+        linkTo(el("div", { class: "t" }, el("b", {}, wkLabel(w)), el("small", {}, es.length ? plural(es.length, "entrega", "entregas") : "Sem entregas")),
+          goReg(null, w.s <= todayIso() ? w.s : todayIso()), "gorow", "Ver os dias desta semana"),
         el("span", { class: "num" }, BRL(sum(es, e => e.valor))),
         el("button", { type: "button", class: "pill " + (paid ? "ok" : "warn"),
           "aria-label": paid ? `Semana de ${short(w.s)} paga. Tocar para marcar como a receber` : `Semana de ${short(w.s)} a receber. Tocar para marcar como paga`,
@@ -1514,6 +1568,20 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     renderResultado();
     renderFuel();
     renderChart();
+    painelLinks();
+  }
+  // blocos fixos do painel que levam à seção correspondente
+  function painelLinks() {
+    const t = todayIso(), up = id => $(id).parentElement, line = id => $(id).closest(".tline");
+    linkTo($("dPM").closest(".hero"), goRel("PM"), "gobox", "Ver o relatório do Posto da Mata");
+    linkTo($("fGasto").closest(".stats"), goCus("combustivel", "costTitle"), "gobox", "Ver os abastecimentos em Custos");
+    linkTo($("sG").closest(".stats"), goRel("PM"), "gobox", "Ver o relatório do Posto da Mata");
+    linkTo(up("dOW"), goReg(null, t), "gobox", "Ver os dias desta semana");
+    [up("dOM"), up("dRec"), up("dPago"), line("dPED"), line("dOUT")].forEach((n, i) => linkTo(n, goRel("OT"), i < 3 ? "gobox" : "gorow", "Ver o relatório da Pedreira e outras"));
+    linkTo(line("tPM"), goReg("PM", t), "gorow", "Abrir o Registrar no PM");
+    linkTo(line("tPED"), goReg("PED", t), "gorow", "Abrir o Registrar na Pedreira");
+    linkTo(line("tOUT"), goReg("OUT", t), "gorow", "Abrir o Registrar em Outras");
+    linkTo(line("tTotal"), goReg(null, t), "gorow", "Ver as entregas de hoje");
   }
 
   function niceMax(v) { if (v <= 0) return 100; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const s of [1,2,2.5,5,10]) if (s*p >= v) return s*p; return 10*p; }
@@ -2136,9 +2204,9 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   }
   function ledger(box, rows) {
     box.textContent = "";
-    rows.forEach(r => box.append(el("div", { class: "lrow " + (r.k || "") },
+    rows.forEach(r => box.append(linkTo(el("div", { class: "lrow " + (r.k || "") },
       el("div", { class: "t" }, el("span", {}, r.label), r.sub ? el("small", {}, r.sub) : null),
-      el("span", { class: "num" }, (r.k === "out" ? "− " : "") + BRL(r.v)))));
+      el("span", { class: "num" }, (r.k === "out" ? "− " : "") + BRL(r.v))), r.go, "gorow")));
   }
   function setProfit(id, v) { const n = $(id); n.textContent = BRL(v); n.style.color = v < 0 ? "var(--danger)" : "var(--ok)"; }
   // Dias úteis (segunda a sexta) do mês, até um dia (inclusive).
@@ -2180,27 +2248,27 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const fixPM = fixos.filter(x => x.area === "PM"), espPM = esp.filter(x => x.area === "PM");
     const espLabel = list => list.length ? [...new Set(list.map(x => x.tipoGasto))].join(", ") : "Nenhum no mês";
     ledger($("pmLedger"), [
-      { label: "Faturamento", v: recPM, k: "in" },
-      { label: "Combustível", sub: fuel.rows.length ? plural(fuel.rows.length, "abastecimento", "abastecimentos") : "Nenhum abastecimento no mês", v: fuel.gasto, k: "out" },
-      ...fixPM.map(x => ({ label: x.nome, sub: "Custo fixo mensal", v: x.valor, k: "out" })),
-      { label: "Outros gastos", sub: espLabel(espPM), v: sum(espPM, x => x.valor), k: "out" },
+      { label: "Faturamento", v: recPM, k: "in", go: goRel("PM") },
+      { label: "Combustível", sub: fuel.rows.length ? plural(fuel.rows.length, "abastecimento", "abastecimentos") : "Nenhum abastecimento no mês", v: fuel.gasto, k: "out", go: goCus("combustivel", "costTitle") },
+      ...fixPM.map(x => ({ label: x.nome, sub: "Custo fixo mensal", v: x.valor, k: "out", go: goCus(null, "fxSummary") })),
+      { label: "Outros gastos", sub: espLabel(espPM), v: sum(espPM, x => x.valor), k: "out", go: goCus("esporadico", "costTitle") },
     ]);
     const pmP = resultBlock("pm", recPM, fuel.gasto, sum(fixPM, x => x.valor) + sum(espPM, x => x.valor));
     if (state.partner) return;
     const recOut = sum(E.filter(e => e.tipo !== "PM"), e => e.valor);
     const fixOT = fixos.filter(x => x.area === "OUT"), espOT = esp.filter(x => x.area === "OUT");
     ledger($("otLedger"), [
-      { label: "Faturamento", v: recOut, k: "in" },
-      ...fixOT.map(x => ({ label: x.nome, sub: "Custo fixo mensal", v: x.valor, k: "out" })),
-      { label: "Outros gastos", sub: espLabel(espOT), v: sum(espOT, x => x.valor), k: "out" },
+      { label: "Faturamento", v: recOut, k: "in", go: goRel("OT") },
+      ...fixOT.map(x => ({ label: x.nome, sub: "Custo fixo mensal", v: x.valor, k: "out", go: goCus(null, "fxSummary") })),
+      { label: "Outros gastos", sub: espLabel(espOT), v: sum(espOT, x => x.valor), k: "out", go: goCus("esporadico", "costTitle") },
     ]);
     const otP = resultBlock("ot", recOut, 0, sum(fixOT, x => x.valor) + sum(espOT, x => x.valor));
     ledger($("geLedger"), [
-      { label: "Faturamento Posto da Mata", v: recPM, k: "in" },
-      { label: "Faturamento Pedreira e outras", v: recOut, k: "in" },
-      { label: "Combustível", sub: "Carro do PM", v: fuel.gasto, k: "out" },
-      ...fixos.map(x => ({ label: x.nome, sub: `Custo fixo · ${AREAS[x.area] || "Geral"}`, v: x.valor, k: "out" })),
-      { label: "Outros gastos", sub: espLabel(esp), v: sum(esp, x => x.valor), k: "out" },
+      { label: "Faturamento Posto da Mata", v: recPM, k: "in", go: goRel("PM") },
+      { label: "Faturamento Pedreira e outras", v: recOut, k: "in", go: goRel("OT") },
+      { label: "Combustível", sub: "Carro do PM", v: fuel.gasto, k: "out", go: goCus("combustivel", "costTitle") },
+      ...fixos.map(x => ({ label: x.nome, sub: `Custo fixo · ${AREAS[x.area] || "Geral"}`, v: x.valor, k: "out", go: goCus(null, "fxSummary") })),
+      { label: "Outros gastos", sub: espLabel(esp), v: sum(esp, x => x.valor), k: "out", go: goCus("esporadico", "costTitle") },
     ]);
     const geP = resultBlock("ge", recPM + recOut, fuel.gasto, sum(fixos, x => x.valor) + sum(esp, x => x.valor));
     if (geP && pmP && otP) {
@@ -2240,7 +2308,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const list = $("fuelList"); list.textContent = "";
     if (!state.loadedCustos) list.append(el("div", { class: "empty" }, "Carregando…"));
     else if (!s.rows.length) list.append(el("div", { class: "empty" }, "Nenhum abastecimento neste mês."));
-    [...s.rows].reverse().forEach(r => list.append(costItem(r, false)));
+    [...s.rows].reverse().forEach(r => list.append(linkTo(costItem(r, false), goCus("combustivel", "costTitle"), "gorow", "Ver em Custos")));
   }
 
   // ---------- CUSTOS: registro ----------
@@ -2454,6 +2522,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   function renderFinResumo() {
     const m = state.month, cur = monthOf(todayIso()), f = finMonth(m);
     setProfit("fSaldo", f.saldo); $("fSaldo").style.color = f.saldo < 0 ? "var(--danger)" : "";
+    linkTo($("fSaldo").closest(".hero"), () => goView("fin-lancar", null, "flTitle"), "gobox", "Ver os lançamentos do mês");
     $("fSaldoSub").textContent = !state.finLoaded ? "Carregando…" : `Receitas − despesas${f.guardado ? " − guardado nas metas" : ""}, até agora`;
     $("fRec").textContent = BRL(f.recReal);
     $("fRecSub").textContent = f.imp ? `inclui ${BRL(f.autoReal)} da Pedreira` : (f.orcRec ? `de ${BRL(f.orcRec)} previstos` : "");
@@ -2462,11 +2531,12 @@ body.adm-viewer .adm-only{display:inline-flex!important}
 
     // previsão
     const pill = $("fPrevState");
+    const goOrc = () => goView("fin-orcamento");
     ledger($("fPrevLedger"), [
-      { label: "Receitas previstas", sub: m > cur ? "Pelo orçamento" : `Recebido ${BRL(f.recReal)}`, v: f.recPrev, k: "in" },
-      ...(f.autoPrev || f.autoReal ? [{ label: "↳ Pedreira e outras", sub: m === cur ? "Lucro previsto pelos dias úteis" : "Lucro do transporte", v: m < cur ? f.autoReal : (f.autoPrev || futureAuto()) }] : []),
-      { label: "Despesas previstas", sub: `Gasto ${BRL(f.despReal)} · orçado ${BRL(f.orcDesp)}`, v: f.despPrev, k: "out" },
-      ...(f.guardado ? [{ label: "Guardado nas metas", v: f.guardado, k: "out" }] : []),
+      { label: "Receitas previstas", sub: m > cur ? "Pelo orçamento" : `Recebido ${BRL(f.recReal)}`, v: f.recPrev, k: "in", go: goOrc },
+      ...(f.autoPrev || f.autoReal ? [{ label: "↳ Pedreira e outras", sub: m === cur ? "Lucro previsto pelos dias úteis" : "Lucro do transporte", v: m < cur ? f.autoReal : (f.autoPrev || futureAuto()), go: navTr() ? () => goView("painel") : null }] : []),
+      { label: "Despesas previstas", sub: `Gasto ${BRL(f.despReal)} · orçado ${BRL(f.orcDesp)}`, v: f.despPrev, k: "out", go: goOrc },
+      ...(f.guardado ? [{ label: "Guardado nas metas", v: f.guardado, k: "out", go: () => goView("fin-metas") }] : []),
     ]);
     setProfit("fSaldoPrev", f.saldoPrev);
     $("fSaldoPrevLbl").textContent = m < cur ? "Saldo final do mês" : "Saldo previsto no fim do mês";
@@ -2498,10 +2568,10 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     names.forEach(x => {
       const frac = x.orc ? x.gasto / x.orc : x.gasto / maxG;
       const color = !x.orc ? "var(--c-ped)" : frac > 1 ? "var(--danger)" : frac > 0.85 ? "var(--warn)" : "var(--accent)";
-      cats.append(el("div", { class: "cat" },
+      cats.append(linkTo(el("div", { class: "cat" },
         el("div", { class: "top" }, el("span", {}, x.c), el("span", { class: "num" }, BRL(x.gasto), el("small", {}, x.orc ? ` / ${BRL(x.orc)}` : " · sem orçamento"))),
         bar(frac, color),
-        x.orc && x.gasto > x.orc ? el("small", { class: "over" }, `${BRL(x.gasto - x.orc)} acima do orçado`) : null));
+        x.orc && x.gasto > x.orc ? el("small", { class: "over" }, `${BRL(x.gasto - x.orc)} acima do orçado`) : null), () => goView("fin-orcamento"), "gorow", "Ver o orçamento"));
     });
 
     // receitas x despesas (6 meses)
@@ -2515,6 +2585,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       el("em", {}, mShort(x.m)))));
     const bs = fs6.find(x => x.m === state.barsSel);
     $("fBarsCap").textContent = bs ? `${monthLabel(bs.m)}: receitas ${BRL(bs.recReal)} · despesas ${BRL(bs.despReal)} · saldo ${BRL(bs.recReal - bs.despReal)}` : "Toque num mês para ver os valores.";
+    if (bs) $("fBarsCap").append(" ", el("button", { type: "button", class: "linkbtn caplink", onclick: () => goView("fin-lancar", () => setMonth(bs.m), "flTitle") }, "Ver lançamentos ›"));
 
     // balanço mês a mês: 5 meses antes, o atual e 5 depois
     const bm = []; for (let i = -5; i <= 5; i++) bm.push(addMonth(cur, i));
@@ -2533,12 +2604,14 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const acc = sum(bv, x => x.v), sel = bv.find(x => x.m === state.balSel);
     $("fBalCap").textContent = sel ? `${monthLabel(sel.m)}: ${sel.fut ? "saldo previsto" : "saldo"} ${BRL(sel.v)}`
       : `Somando de ${mShort(bm[0])} a ${mShort(bm[bm.length - 1])}: ${BRL(acc)}. Meses futuros usam o orçamento.`;
+    if (sel) $("fBalCap").append(" ", el("button", { type: "button", class: "linkbtn caplink",
+      onclick: () => sel.fut ? goView("fin-orcamento", () => setMonth(sel.m)) : goView("fin-lancar", () => setMonth(sel.m), "flTitle") }, sel.fut ? "Ver orçamento ›" : "Ver lançamentos ›"));
 
     // últimos lançamentos
     const rl = $("fRecent"); rl.textContent = "";
     const last = [...state.finLanc].sort((a, b) => (b.data + (b.criadoEm || "")).localeCompare(a.data + (a.criadoEm || ""))).slice(0, 5);
     if (!last.length) rl.append(el("div", { class: "empty" }, "Nenhum lançamento ainda. Toque em Lançar para começar."));
-    last.forEach(x => rl.append(finItem(x, false)));
+    last.forEach(x => rl.append(linkTo(finItem(x, false), () => goView("fin-lancar", () => setMonth(monthOf(x.data)), "flTitle"), "gorow", "Ver nos lançamentos")));
   }
 
   // ---------- lançar ----------
@@ -3499,7 +3572,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   // ---------- peças visuais ----------
   const admKpi = (label, big, sub, extra) => el("div", { class: "kpi" }, el("span", { class: "label" }, label), el("b", { class: "num" }, String(big)), el("small", {}, sub), extra || null);
   const admLegend = items => el("div", { class: "legend" }, items.map(([c, t]) => el("span", {}, el("i", { class: "dot", style: `background:${c}` }), t)));
-  function admBars(rows, segsOf, capOf, empty) {
+  function admBars(rows, segsOf, capOf, empty, onGo) {
     const wrap = el("div", { class: "wrap", style: "gap:8px" });
     const tot = r => sum(segsOf(r), s => s.v);
     if (!rows.some(r => tot(r) > 0)) { wrap.append(el("div", { class: "empty" }, empty)); return wrap; }
@@ -3510,7 +3583,8 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       const segs = segsOf(r).filter(s => s.v > 0), dt = parse(r.d), day = dt.getDate();
       const tick = n <= 8 ? `${DIAS3[dt.getDay()]} ${day}` : (day === 1 || day % 5 === 0 || i === n - 1 ? String(day) : "");
       const b = el("button", { type: "button", class: "sb" + (r.d === t ? " today" : ""), "aria-label": `${DIAS3[dt.getDay()]} ${fmtDate(r.d)}: ${tot(r)}`,
-        onclick: () => { chart.querySelectorAll(".sb").forEach(x => x.setAttribute("aria-pressed", "false")); b.setAttribute("aria-pressed", "true"); cap.textContent = capOf(r); } },
+        onclick: () => { chart.querySelectorAll(".sb").forEach(x => x.setAttribute("aria-pressed", "false")); b.setAttribute("aria-pressed", "true"); cap.textContent = capOf(r);
+          if (onGo) cap.append(" ", el("button", { type: "button", class: "linkbtn caplink", onclick: () => onGo(r) }, "Ver entregas do dia ›")); } },
         el("div", { class: "stack" }, segs.map(s => el("i", { style: `height:${Math.max(2, s.v / max * 100)}%;background:${s.c}`, title: s.n }))),
         el("em", {}, tick));
       chart.append(b);
@@ -3552,12 +3626,23 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     return true;
   }
 
+  // ---------- atalhos do ADM ----------
+  const admGoDay = d => () => goView("adm-entregas", () => { adm.ref = d; admSub(); });
+  // dia a abrir em Entregas a partir de um período: hoje (se estiver nele), senão o último dia com registro, senão o primeiro
+  function admBestDay(a, b) {
+    const t = todayIso();
+    if (a === b || (t >= a && t <= b)) return a === b ? a : t;
+    const ds = [...adm.pm.map(e => e.data), ...adm.ck.filter(d => admNamed(d).length || admIni(d)).map(d => d.data)].filter(d => d >= a && d <= b).sort();
+    return ds.length ? ds[ds.length - 1] : a;
+  }
+
   // ---------- Painel ----------
   function admHojeCard() {
     const t = todayIso(), pm = adm.pm.filter(e => e.data === t), g = sum(pm, e => e.g), m = sum(pm, e => e.m);
     const box = el("div", { class: "today" });
     box.append(el("div", { class: "tline" }, el("div", { class: "t" }, el("b", {}, "Posto da Mata"), el("small", {}, pm.length ? `G ${g} · M ${m} · ${plural(pm.length, "entrega", "entregas")}` : "Nenhuma entrega registrada hoje")),
       el("span", { class: "pill " + (pm.length ? "ok" : "") }, `${g + m} ${g + m === 1 ? "caixa" : "caixas"}`)));
+    const goHoje = admGoDay(t);
     const docs = adm.hoje.filter(d => admNamed(d).length || admIni(d)).sort((x, y) => admOrdP(x.perfil) - admOrdP(y.perfil));
     docs.forEach(d => {
       const its = admNamed(d), s = admStatus(d);
@@ -3565,6 +3650,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
         el("span", { class: "pill " + s.cls }, `${sum(its, x => x.marmitas)} marm.`)));
     });
     if (!docs.length) box.append(el("div", { class: "tline" }, el("div", { class: "t" }, el("b", {}, "Checklist"), el("small", {}, "Nenhuma lista com entregas hoje")), el("span", { class: "pill" }, "–")));
+    box.querySelectorAll(".tline").forEach(n => linkTo(n, goHoje, "gorow", "Ver as entregas de hoje"));
     return admCard(`Hoje · ${fmtDate(t).slice(0, 5)}`, box, "wide");
   }
   function admActivity(a) {
@@ -3578,7 +3664,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     ev.sort((x, y) => (x.t || "99:99").localeCompare(y.t || "99:99"));
     const box = el("div", {});
     if (!ev.length) return admEmpty("Nenhuma atividade neste dia.");
-    ev.forEach(e => box.append(el("div", { class: "act" }, el("span", { class: "hr" }, e.t || "--:--"), el("span", { class: "tx" }, e.x, el("small", {}, e.s)))));
+    ev.forEach(e => box.append(linkTo(el("div", { class: "act" }, el("span", { class: "hr" }, e.t || "--:--"), el("span", { class: "tx" }, e.x, el("small", {}, e.s))), admGoDay(a), "gorow", "Ver as entregas do dia")));
     return box;
   }
   function renderAdmPainel() {
@@ -3590,11 +3676,13 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       ? "Ainda não há entregas lançadas pelo responsável. Quando houver, elas aparecem aqui."
       : "Esta conta ainda não tem dados. Se você é o usuário ADM, peça ao responsável para liberar o seu e-mail em Ajustes → Acesso ao ADM Entregas. Veja o diagnóstico no fim da página."));
     const prog = el("div", { class: "track" }, el("i", { style: `width:${admPct(A.ent, A.nomes)}%;background:var(--grad)` }));
+    const goBest = admGoDay(admBestDay(a, b)), kpiGo = n => linkTo(n, goBest, "gobox", "Ver as entregas");
     body.append(el("div", { class: "adm-kpis" },
       admKpi("Caixas PM", A.caixas, A.caixas ? `G ${A.g} · M ${A.m}${mode !== "dia" ? ` · ${plural(A.diasPM, "dia", "dias")}` : ""}` : "Nenhuma entrega no período"),
       admKpi("Marmitas (checklist)", A.marm, A.listas ? `${plural(A.nomes, "entrega", "entregas")} em ${plural(A.listas, "lista", "listas")}` : "Nenhuma lista no período"),
       admKpi("Entregas concluídas", `${A.ent}/${A.nomes}`, A.nomes ? `${admPct(A.ent, A.nomes)}% concluído · ${A.conf} conferidos` : "Sem entregas no período", A.nomes ? prog : null),
       admKpi("Listas finalizadas", `${A.fin}/${A.listas}`, A.durMed ? `Tempo médio ${fmtDur(A.durMed)}` : A.listas ? "Nenhuma finalizada ainda" : "Sem entregas no período")));
+    body.lastChild.querySelectorAll(".kpi").forEach(kpiGo);
     const grid = el("div", { class: "adm-grid" });
     grid.append(admHojeCard());
     if (mode === "dia") {
@@ -3603,26 +3691,28 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       grid.append(
         admCard("Caixas PM por dia", el("div", { class: "wrap", style: "gap:10px" }, admLegend([["var(--c-pm)", "G"], ["var(--c-ped)", "M"]]),
           admBars(S, r => [{ v: r.g, c: "var(--c-pm)", n: "G" }, { v: r.m, c: "var(--c-ped)", n: "M" }],
-            r => `${DIAS3[parse(r.d).getDay()]} ${short(r.d)}: G ${r.g} · M ${r.m} · ${r.g + r.m} caixas`, "Nenhuma caixa neste período."))),
+            r => `${DIAS3[parse(r.d).getDay()]} ${short(r.d)}: G ${r.g} · M ${r.m} · ${r.g + r.m} caixas`, "Nenhuma caixa neste período.", r => admGoDay(r.d)()))),
         admCard("Marmitas por dia (checklist)", el("div", { class: "wrap", style: "gap:10px" }, admLegend(admPerfOrder(A.perf).map(id => [admPerfColor(id), ckNome(id)])),
           admBars(S, r => admPerfOrder(r.byP).map(id => ({ v: r.byP[id], c: admPerfColor(id), n: ckNome(id) })),
-            r => `${DIAS3[parse(r.d).getDay()]} ${short(r.d)}: ${r.marm} marmitas${Object.keys(r.byP).length ? " (" + admPerfOrder(r.byP).map(id => `${ckNome(id)} ${r.byP[id]}`).join(" · ") + ")" : ""}`, "Nenhuma marmita neste período."))));
+            r => `${DIAS3[parse(r.d).getDay()]} ${short(r.d)}: ${r.marm} marmitas${Object.keys(r.byP).length ? " (" + admPerfOrder(r.byP).map(id => `${ckNome(id)} ${r.byP[id]}`).join(" · ") + ")" : ""}`, "Nenhuma marmita neste período.", r => admGoDay(r.d)()))));
     }
     // checklist por perfil
     const ids = admPerfOrder(A.perf);
-    grid.append(admCard("Checklist por perfil", admTbl(["Perfil", "Listas", "Marm.", "Entregas", "Concl.", "Canh.", "Div."],
+    grid.append(admCard("Checklist por perfil", trLinks(admTbl(["Perfil", "Listas", "Marm.", "Entregas", "Concl.", "Canh.", "Div."],
       ids.map(id => { const o = A.perf[id]; return [ckNome(id), o.listas, o.marm, o.nomes, `${o.ent}/${o.nomes}`, o.canh || "–", o.div || "–"]; }),
-      ids.length ? ["Total", A.listas, A.marm, A.nomes, `${A.ent}/${A.nomes}`, A.canh || "–", A.div || "–"] : null, ["l", "r", "r", "r", "r", "r", "r"]), "wide",
+      ids.length ? ["Total", A.listas, A.marm, A.nomes, `${A.ent}/${A.nomes}`, A.canh || "–", A.div || "–"] : null, ["l", "r", "r", "r", "r", "r", "r"]), ids.map(() => goBest)), "wide",
       el("small", { class: "muted" }, "Canh. = canhotos · Div. = divergências")));
     if (mode === "semana") {
-      const rows = S.filter(r => r.g || r.m || r.marm).map(r => [`${DIAS3[parse(r.d).getDay()]} ${short(r.d)}`, r.g + r.m, `G ${r.g} · M ${r.m}`, r.marm, `${r.ent}/${r.nomes}`]);
-      grid.append(admCard("Detalhe por dia", admTbl(["Dia", "Caixas PM", "G · M", "Marmitas", "Entregues"], rows, null, ["l", "r", "r", "r", "r"]), "wide"));
+      const F = S.filter(r => r.g || r.m || r.marm), rows = F.map(r => [`${DIAS3[parse(r.d).getDay()]} ${short(r.d)}`, r.g + r.m, `G ${r.g} · M ${r.m}`, r.marm, `${r.ent}/${r.nomes}`]);
+      grid.append(admCard("Detalhe por dia", trLinks(admTbl(["Dia", "Caixas PM", "G · M", "Marmitas", "Entregues"], rows, null, ["l", "r", "r", "r", "r"]), F.map(r => admGoDay(r.d))), "wide"));
     }
     if (mode === "mes") {
-      const m = monthOf(adm.ref), rows = monthWeeks(m).map(w => { const x = admAgg(w.s, w.e); return [`${short(w.s)} a ${short(w.e)}`, x.caixas, `G ${x.g} · M ${x.m}`, x.marm, `${x.ent}/${x.nomes}`]; })
-        .filter(r => r[1] || r[3]);
-      grid.append(admCard("Detalhe por semana", admTbl(["Semana", "Caixas PM", "G · M", "Marmitas", "Entregues"], rows,
-        rows.length ? ["Mês", A.caixas, `G ${A.g} · M ${A.m}`, A.marm, `${A.ent}/${A.nomes}`] : null, ["l", "r", "r", "r", "r"]), "wide"));
+      const m = monthOf(adm.ref), W = monthWeeks(m).map(w => { const x = admAgg(w.s, w.e); return { w, r: [`${short(w.s)} a ${short(w.e)}`, x.caixas, `G ${x.g} · M ${x.m}`, x.marm, `${x.ent}/${x.nomes}`] }; })
+        .filter(o => o.r[1] || o.r[3]), rows = W.map(o => o.r);
+      // tocar numa semana mostra o painel daquela semana
+      const goWeek = w => () => { adm.mode = "semana"; lsSet("adm.mode", "semana"); admSetRef(w.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      grid.append(admCard("Detalhe por semana", trLinks(admTbl(["Semana", "Caixas PM", "G · M", "Marmitas", "Entregues"], rows,
+        rows.length ? ["Mês", A.caixas, `G ${A.g} · M ${A.m}`, A.marm, `${A.ent}/${A.nomes}`] : null, ["l", "r", "r", "r", "r"]), W.map(o => goWeek(o.w))), "wide"));
     }
     body.append(grid, admDiag(false));
   }
