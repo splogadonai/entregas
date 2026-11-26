@@ -282,6 +282,7 @@ ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;f
 .login-card h2{text-align:center;font-size:22px;margin-top:4px}
 .login-brand{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding-block:4px 0}
 .login-brand .logo{font-size:52px}
+.brand-adm .login-brand .logo{font-size:min(42px,11vw)}.brand-adm .boot .logo{font-size:min(36px,10vw)}
 .login-brand small{color:var(--muted);font-size:15px}
 .login-card .linkbtn{font-size:15px;align-self:center}
 .boot{display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--muted);padding-top:30vh}
@@ -1337,9 +1338,11 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     document.querySelector("#installBar .t b").textContent = "Instale o SPLOG Finanças";
   }
   if (APP === "adm") {
-    document.title = "SPLOG · ADM Entregas";
-    document.querySelector(".login-brand small").textContent = "ADM Entregas";
-    document.querySelector("#installBar .t b").textContent = "Instale o SPLOG ADM";
+    document.title = "SPLOG/Adonai · ADM entregas";
+    document.querySelector(".login-brand small").textContent = "ADM entregas";
+    document.querySelector("#installBar .t b").textContent = "Instale o SPLOG/Adonai ADM";
+    document.querySelectorAll(".logo").forEach(l => { l.firstChild.nodeValue = "SPLOG/Adonai"; l.setAttribute("aria-label", "SPLOG/Adonai"); });
+    document.body.classList.add("brand-adm");
   }
 
   // ---------- helpers ----------
@@ -1403,7 +1406,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     if (APP === "adm") {
       document.body.classList.add("mod-adm");
       document.body.classList.toggle("has-tabs", !!state.db);
-      $("eyebrow").textContent = "ADM Entregas";
+      $("eyebrow").textContent = "ADM entregas";
       $("appTitle").textContent = "ADM Entregas";
       return;
     }

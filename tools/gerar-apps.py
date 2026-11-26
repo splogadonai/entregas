@@ -40,4 +40,4 @@ def gerar(pasta, titulo, desc, nome_app, nome_curto):
 
 
 gerar("financas", "SPLOG · Finanças da família", "Orçamento, lançamentos, metas e previsão do saldo da família.", "SPLOG Finanças", "Finanças")
-gerar("adm", "SPLOG · ADM Entregas", "Painel de entregas (PM e checklist) com quantidades por dia, semana e mês, e relatórios em PDF.", "SPLOG ADM Entregas", "ADM Entregas")
+gerar("adm", "SPLOG/Adonai · ADM entregas", "Painel de entregas (PM e checklist) com quantidades por dia, semana e mês, e relatórios em PDF.", "SPLOG/Adonai ADM entregas", "ADM entregas")

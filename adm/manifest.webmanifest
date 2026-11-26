@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "SPLOG ADM Entregas",
-  "short_name": "ADM Entregas",
+  "name": "SPLOG/Adonai ADM entregas",
+  "short_name": "ADM entregas",
   "description": "Painel de entregas (PM e checklist) com quantidades por dia, semana e mês, e relatórios em PDF.",
   "lang": "pt-BR",
   "dir": "ltr",
