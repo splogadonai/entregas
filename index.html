@@ -953,9 +953,9 @@ body.adm-viewer .adm-only{display:inline-flex!important}
 
     <section class="panel" aria-labelledby="ckTitle">
       <div class="panel-head"><h2 id="ckTitle">Pajé</h2><button class="ghost" type="button" id="ckCopy">Copiar do dia anterior</button></div>
-      <div class="ckhead" aria-hidden="true"><span></span><span>Conf.</span><span>Entr.</span><span>Nome</span><span>Marmitas</span><span></span></div>
+      <div class="ckhead" aria-hidden="true"><span></span><span>Conf.</span><span>Entr.</span><span>Entrega</span><span>Marmitas</span><span></span></div>
       <div id="ckRows"></div>
-      <button class="ghost" type="button" id="ckAdd" style="align-self:flex-start">+ Adicionar nome</button>
+      <button class="ghost" type="button" id="ckAdd" style="align-self:flex-start">+ Adicionar entrega</button>
       <div class="trip" id="ckTrip">
         <div class="trip-times" id="ckTripTimes"></div>
         <div class="row">
@@ -974,7 +974,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       </div>
       <div class="status" id="ckStatus" role="status"></div>
     </section>
-    <small class="muted" style="text-align:center">Arraste pela alça <b>⋮⋮</b> para mudar a ordem. Marque <b>Conf.</b> quando conferir e <b>Entr.</b> quando entregar: depois de marcadas, as caixas não desmarcam. Nos nomes com <b>✍ canhoto</b> (como a Habix), <b>Entr.</b> abre a assinatura de quem recebeu.</small>
+    <small class="muted" style="text-align:center">Arraste pela alça <b>⋮⋮</b> para mudar a ordem. Marque <b>Conf.</b> quando conferir e <b>Entr.</b> quando entregar: depois de marcadas, as caixas não desmarcam. Nas entregas com <b>✍ canhoto</b> (como a Habix), <b>Entr.</b> abre a assinatura de quem recebeu.</small>
   </section>
 
   <!-- ===================== CUSTOS ===================== -->
@@ -1929,7 +1929,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     font(21, true); tc(C.ink); const tl = pdf.splitTextToSize(title, W);
     pdf.text(tl, M, 33); k.y = 33 + (tl.length - 1) * 8 + 6.5;
     if (meta.length) {
-      font(9); tc(C.mute);
+      font(9.8); tc(C.mute);
       const ml = pdf.splitTextToSize(meta.filter(Boolean).join("     ·     "), W);
       pdf.text(ml, M, k.y); k.y += ml.length * 4.4;
     }
@@ -1943,9 +1943,9 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       items.forEach((it, i) => {
         const x = M + i * (w + gap), tone = it.tone === "acc" ? [C.accBg, C.acc] : it.tone === "red" ? [C.redBg, C.red] : [C.fill, C.ink];
         fc(tone[0]); pdf.roundedRect(x, k.y, w, h, 3, 3, "F");
-        font(7, true); tc(C.mute); pdf.text(fit(it.label.toUpperCase(), w - 8), x + 4, k.y + 6, { charSpace: 0.25 });
+        font(7.6, true); tc(C.mute); pdf.text(fit(it.label.toUpperCase(), w - 8), x + 4, k.y + 6, { charSpace: 0.25 });
         font(it.value.length > 12 ? 13 : 15.5, true); tc(tone[1]); pdf.text(fit(it.value, w - 8), x + 4, k.y + 13.6);
-        if (it.sub) { font(7.5); tc(C.mute); pdf.text(fit(it.sub, w - 8), x + 4, k.y + 18); }
+        if (it.sub) { font(8.2); tc(C.mute); pdf.text(fit(it.sub, w - 8), x + 4, k.y + 18); }
       });
       k.y += h + 8;
     };
@@ -1967,7 +1967,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
 
     // tabela: widths em proporção; cols: 2 divide as linhas em duas colunas lado a lado.
     // célula pode ser texto ou { t, color, bold }. sub(row) devolve { t, color } para uma 2ª linha pequena.
-    k.table = ({ head, rows, widths, aligns = [], foot, cols = 1, rowH = 6, sub, size = 9 }) => {
+    k.table = ({ head, rows, widths, aligns = [], foot, cols = 1, rowH = 6.4, sub, size = 9.6 }) => {
       const gutter = 8, colW = cols === 2 ? (W - gutter) / 2 : W, tot = widths.reduce((a, b) => a + b, 0);
       const ws = widths.map(w => w / tot * colW), HEAD = 6.5;
       const xsAt = x0 => { const xs = []; let a = x0; ws.forEach(w => { xs.push(a); a += w; }); return xs; };
@@ -1978,11 +1978,11 @@ body.adm-viewer .adm-only{display:inline-flex!important}
         aligns[i] === "r" ? pdf.text(s, xs[i] + ws[i] - 1.2, yy, { align: "right" }) : aligns[i] === "c" ? pdf.text(s, xs[i] + ws[i] / 2, yy, { align: "center" }) : pdf.text(s, xs[i] + 1.2, yy);
       };
       const header = (x0, yy) => {
-        const xs = xsAt(x0); font(7, true); tc(C.mute);
+        const xs = xsAt(x0); font(7.6, true); tc(C.mute);
         head.forEach((h, i) => { const s = h.toUpperCase(); aligns[i] === "r" ? pdf.text(s, xs[i] + ws[i] - 1.2, yy, { align: "right" }) : aligns[i] === "c" ? pdf.text(s, xs[i] + ws[i] / 2, yy, { align: "center" }) : pdf.text(s, xs[i] + 1.2, yy); });
         dc(C.rule); pdf.setLineWidth(0.25); pdf.line(x0, yy + 2.2, x0 + colW, yy + 2.2);
       };
-      const hOf = r => r && r.group ? 8 : rowH + (sub && sub(r) ? 3.8 : 0);
+      const hOf = r => r && r.group ? 8 : rowH + (sub && sub(r) ? 4.2 : 0);
       const drawRow = (r, x0, yy) => {
         if (r.group) {              // faixa de grupo (ex.: dia e perfil)
           fc(C.fill); pdf.roundedRect(x0, yy - 3.4, colW, 6.2, 1.5, 1.5, "F");
@@ -1991,7 +1991,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
           return;
         }
         const xs = xsAt(x0); r.forEach((v, i) => cell(v, i, xs, yy));
-        const s = sub && sub(r); if (s) { font(7.2); tc(s.color || C.mute); pdf.text(fit(s.t, colW - 3), xs[0] + 1.2, yy + 3.5); }
+        const s = sub && sub(r); if (s) { font(8); tc(s.color || C.mute); pdf.text(fit(s.t, colW - 3), xs[0] + 1.2, yy + 3.9); }
         dc(C.line); pdf.setLineWidth(0.12); pdf.line(x0, yy + hOf(r) - 4, x0 + colW, yy + hOf(r) - 4);
       };
       let i = 0, grp = null;
@@ -2041,7 +2041,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       for (let p = 1; p <= n; p++) {
         pdf.setPage(p);
         dc(C.line); pdf.setLineWidth(0.2); pdf.line(M, PH - 12, PW - M, PH - 12);
-        font(7.5); tc(C.faint);
+        font(8); tc(C.faint);
         pdf.text(`SPLOG/Adonai  ·  ${em}`, M, PH - 7.5);
         pdf.text(`Página ${p} de ${n}`, PW - M, PH - 7.5, { align: "right" });
       }
@@ -2902,8 +2902,8 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     if (!ck.loaded) hint = "";
     else if (fim) hint = "Entrega concluída. A lista ficou travada para preservar o registro.";
     else if (ini) hint = faltaEnt ? `Faltam ${faltaEnt} ${faltaEnt === 1 ? "entrega" : "entregas"} para finalizar.` : "Tudo entregue. Pode finalizar a entrega.";
-    else if (!it.length) hint = "Adicione os nomes para poder iniciar.";
-    else hint = faltaConf ? `Faltam ${faltaConf} ${faltaConf === 1 ? "nome" : "nomes"} para conferir antes de iniciar. A marcação Entr. só libera depois de iniciar.` : "Tudo conferido. Pode iniciar a entrega.";
+    else if (!it.length) hint = "Adicione as entregas para poder iniciar.";
+    else hint = faltaConf ? `Faltam ${faltaConf} ${faltaConf === 1 ? "entrega" : "entregas"} para conferir antes de iniciar. A marcação Entr. só libera depois de iniciar.` : "Tudo conferido. Pode iniciar a entrega.";
     $("ckTripHint").textContent = hint;
     // travada depois de finalizar
     $("ckAdd").disabled = ckTravada(); $("ckCopy").disabled = ckTravada();
@@ -2980,7 +2980,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   }
   const GRIP = '<svg viewBox="0 0 14 20" aria-hidden="true"><g fill="currentColor"><circle cx="4" cy="4" r="1.6"/><circle cx="10" cy="4" r="1.6"/><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="4" cy="16" r="1.6"/><circle cx="10" cy="16" r="1.6"/></g></svg>';
   function ckRow(it) {
-    const grip = el("button", { type: "button", class: "grip", "aria-label": `Mover ${it.nome || "nome"} (setas para cima e para baixo)` });
+    const grip = el("button", { type: "button", class: "grip", "aria-label": `Mover ${it.nome || "entrega"} (setas para cima e para baixo)` });
     grip.innerHTML = GRIP;
     grip.onkeydown = ev => {
       if (ev.key !== "ArrowUp" && ev.key !== "ArrowDown") return;
@@ -3007,7 +3007,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       if (it.canhoto && !it.comprovante) { ent.checked = false; cnOpen(it.id); return; }
       it.entregue = true; ckChange(true); renderCk();
     };
-    const nome = el("input", { type: "text", value: it.nome, placeholder: "Nome", "aria-label": "Nome", autocomplete: "off" });
+    const nome = el("input", { type: "text", value: it.nome, placeholder: "Entrega", "aria-label": "Entrega", autocomplete: "off" });
     nome.oninput = () => { it.nome = nome.value; ckChange(false); ckTotals(); };
     nome.onblur = () => {
       if (it.canhoto === undefined && CN_RE.test(it.nome)) { it.canhoto = true; fillSub(); }
@@ -3017,7 +3017,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     marm.value = it.marmitas || "";
     marm.oninput = () => { it.marmitas = Math.max(0, parseInt(marm.value, 10) || 0); ckChange(false); ckTotals(); };
     marm.onblur = () => ckChange(true);
-    const del = el("button", { type: "button", class: "x", "aria-label": `Remover ${it.nome || "nome"}`, onclick: () => {
+    const del = el("button", { type: "button", class: "x", "aria-label": `Remover ${it.nome || "entrega"}`, onclick: () => {
       state.ck.docs[state.ck.perfil] = ckItens().filter(x => x !== it); ckChange(true); renderCk();
     } }, "×");
     // linha de baixo: canhoto (exigir, aguardando ou confirmado)
@@ -3060,7 +3060,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const box = $("ckRows"); box.textContent = "";
     const itens = ckItens();
     if (!ck.loaded) box.append(el("div", { class: "empty" }, "Carregando…"));
-    else if (!itens.length) box.append(el("div", { class: "empty" }, "Nenhum nome nesta lista. Toque em + Adicionar nome."));
+    else if (!itens.length) box.append(el("div", { class: "empty" }, "Nenhuma entrega nesta lista. Toque em + Adicionar entrega."));
     itens.forEach(it => box.append(ckRow(it)));
     ckTotals();
   }
@@ -3083,7 +3083,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       state.ck.docs[p] = (s.data().itens || []).map(it => ({ id: rid(), nome: it.nome, marmitas: it.marmitas || 0, conferida: false, entregue: false,
         canhoto: it.canhoto !== undefined ? it.canhoto : (CN_RE.test(it.nome) ? true : undefined) }));
       ckChange(true); renderCk();
-      setStatus("ckStatus", `Nomes copiados de ${fmtDate(prev)}. Confira e marque o que foi feito.`);
+      setStatus("ckStatus", `Entregas copiadas de ${fmtDate(prev)}. Confira e marque o que foi feito.`);
     } catch { setStatus("ckStatus", "Não foi possível copiar. Tente de novo.", true); }
   };
   $("ckNovoCancel").onclick = () => { $("ckPerfilForm").hidden = true; };
@@ -3113,7 +3113,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   $("ckPdf").onclick = () => {
     if (!window.jspdf) { setStatus("ckStatus", "O gerador de PDF não carregou. Verifique a conexão e recarregue.", true); return; }
     const linhas = ckLinhas();
-    if (!linhas.length) { setStatus("ckStatus", "Adicione nomes antes de baixar o relatório.", true); return; }
+    if (!linhas.length) { setStatus("ckStatus", "Adicione entregas antes de baixar o relatório.", true); return; }
     const day = state.ck.day, nome = ckNome(state.ck.perfil);
     const tot = sum(linhas, r => r[1]), ent = linhas.filter(r => r[3] === "Sim").length, conf = linhas.filter(r => r[2] === "Sim").length;
     const canh = linhas.filter(r => r[4]).length, div = linhas.filter(r => r[4] && r[7]).length;
@@ -3121,13 +3121,13 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       meta: [`${DOWL[parse(day).getDay()]}, ${fmtDate(day)}`, ckIni() ? `Início ${hhmm(ckIni())}` : "Entrega não iniciada", ckIni() && (ckFim() ? `Fim ${hhmm(ckFim())}` : "Em andamento")] });
     const sim = v => v === "Sim" ? { t: "Sim", color: k.C.green, bold: true } : { t: "Não", color: k.C.faint };
     k.cards([
-      { label: "Marmitas", value: String(tot), sub: plural(linhas.length, "nome", "nomes"), tone: "acc" },
+      { label: "Marmitas", value: String(tot), sub: plural(linhas.length, "entrega", "entregas"), tone: "acc" },
       { label: "Conferidas", value: `${conf}/${linhas.length}`, sub: conf === linhas.length ? "Todas conferidas" : `${linhas.length - conf} pendente(s)` },
       { label: "Entregues", value: `${ent}/${linhas.length}`, sub: ent === linhas.length ? "Todas entregues" : `${linhas.length - ent} pendente(s)` },
       { label: ckFim() ? "Duração" : "Canhotos", value: ckFim() ? ckDur() : String(canh), sub: ckFim() ? `${hhmm(ckIni())} às ${hhmm(ckFim())}` : (canh ? "com assinatura" : "nenhum"), tone: !ckFim() && div ? "red" : "" },
     ]);
-    k.h2("Lista de entregas", plural(linhas.length, "nome", "nomes"));
-    k.table({ head: ["Nome", "Marmitas", "Conferida", "Entregue"], rows: linhas.map(r => Object.assign([{ t: r[0], bold: true }, r[1], sim(r[2]), sim(r[3])], { src: r })),
+    k.h2("Lista de entregas", plural(linhas.length, "entrega", "entregas"));
+    k.table({ head: ["Entrega", "Marmitas", "Conferida", "Entregue"], rows: linhas.map(r => Object.assign([{ t: r[0], bold: true }, r[1], sim(r[2]), sim(r[3])], { src: r })),
       widths: [106, 26, 25, 25], aligns: ["l", "r", "c", "c"], rowH: 6.6,
       sub: ({ src: r }) => r[4] ? { t: `Canhoto: recebido por ${r[4]} às ${r[6]}  ·  conferiu ${r[5]}${r[7] ? "  ·  DIVERGENTE DO PEDIDO" : ""}`, color: r[7] ? k.C.red : k.C.mute } : null,
       foot: ["Total", tot, `${conf}/${linhas.length}`, `${ent}/${linhas.length}`] });
@@ -3136,9 +3136,9 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   };
   $("ckCsv").onclick = () => {
     const linhas = ckLinhas();
-    if (!linhas.length) { setStatus("ckStatus", "Adicione nomes antes de baixar a planilha.", true); return; }
+    if (!linhas.length) { setStatus("ckStatus", "Adicione entregas antes de baixar a planilha.", true); return; }
     const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const rows = [["Data", "Perfil", "Nome", "Marmitas", "Conferida", "Entregue", "Recebido por", "Qtd conferida", "Hora da confirmação", "Divergência", "Início da entrega", "Fim da entrega", "Duração"]];
+    const rows = [["Data", "Perfil", "Entrega", "Marmitas", "Conferida", "Entregue", "Recebido por", "Qtd conferida", "Hora da confirmação", "Divergência", "Início da entrega", "Fim da entrega", "Duração"]];
     linhas.forEach(r => rows.push([fmtDate(state.ck.day), ckNome(state.ck.perfil), r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[4] ? (r[7] ? "Sim" : "Não") : "", ckIni() ? hhmm(ckIni()) : "", ckFim() ? hhmm(ckFim()) : "", ckDur()]));
     ckDownload(`entregas-${slugOf(ckNome(state.ck.perfil))}-${state.ck.day}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n"), "text/csv;charset=utf-8");
   };
@@ -3555,7 +3555,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       box.append(el("div", { class: "tline" }, el("div", { class: "t" }, el("b", {}, ckNome(d.perfil)), el("small", {}, s.txt)),
         el("span", { class: "pill " + s.cls }, `${sum(its, x => x.marmitas)} marm.`)));
     });
-    if (!docs.length) box.append(el("div", { class: "tline" }, el("div", { class: "t" }, el("b", {}, "Checklist"), el("small", {}, "Nenhuma lista com nomes hoje")), el("span", { class: "pill" }, "–")));
+    if (!docs.length) box.append(el("div", { class: "tline" }, el("div", { class: "t" }, el("b", {}, "Checklist"), el("small", {}, "Nenhuma lista com entregas hoje")), el("span", { class: "pill" }, "–")));
     return admCard(`Hoje · ${fmtDate(t).slice(0, 5)}`, box, "wide");
   }
   function admActivity(a) {
@@ -3563,7 +3563,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     adm.pm.filter(e => e.data === a).forEach(e => ev.push({ t: e.hora || "", x: `Entrega PM · ${e.g || 0} G + ${e.m || 0} M`, s: `${(e.g || 0) + (e.m || 0)} caixas` }));
     adm.ck.filter(d => d.data === a).forEach(d => {
       const its = admNamed(d), nome = ckNome(d.perfil);
-      if (admIni(d)) ev.push({ t: hhmm(admIni(d)), x: `${nome} · entrega iniciada`, s: `${its.length} ${its.length === 1 ? "nome" : "nomes"} · ${sum(its, x => x.marmitas)} marmitas` });
+      if (admIni(d)) ev.push({ t: hhmm(admIni(d)), x: `${nome} · entrega iniciada`, s: `${plural(its.length, "entrega", "entregas")} · ${sum(its, x => x.marmitas)} marmitas` });
       if (admFim(d)) ev.push({ t: hhmm(admFim(d)), x: `${nome} · entrega finalizada`, s: `Duração ${fmtDur(admDurMs(d))} · ${its.filter(x => x.entregue).length}/${its.length} entregues` });
     });
     ev.sort((x, y) => (x.t || "99:99").localeCompare(y.t || "99:99"));
@@ -3583,9 +3583,9 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const prog = el("div", { class: "track" }, el("i", { style: `width:${admPct(A.ent, A.nomes)}%;background:var(--grad)` }));
     body.append(el("div", { class: "adm-kpis" },
       admKpi("Caixas PM", A.caixas, A.caixas ? `G ${A.g} · M ${A.m}${mode !== "dia" ? ` · ${plural(A.diasPM, "dia", "dias")}` : ""}` : "Nenhuma entrega no período"),
-      admKpi("Marmitas (checklist)", A.marm, A.listas ? `${plural(A.nomes, "nome", "nomes")} em ${plural(A.listas, "lista", "listas")}` : "Nenhuma lista no período"),
-      admKpi("Nomes entregues", `${A.ent}/${A.nomes}`, A.nomes ? `${admPct(A.ent, A.nomes)}% concluído · ${A.conf} conferidos` : "Sem nomes no período", A.nomes ? prog : null),
-      admKpi("Entregas finalizadas", `${A.fin}/${A.listas}`, A.durMed ? `Tempo médio ${fmtDur(A.durMed)}` : A.listas ? "Nenhuma finalizada ainda" : "Sem entregas no período")));
+      admKpi("Marmitas (checklist)", A.marm, A.listas ? `${plural(A.nomes, "entrega", "entregas")} em ${plural(A.listas, "lista", "listas")}` : "Nenhuma lista no período"),
+      admKpi("Entregas concluídas", `${A.ent}/${A.nomes}`, A.nomes ? `${admPct(A.ent, A.nomes)}% concluído · ${A.conf} conferidos` : "Sem entregas no período", A.nomes ? prog : null),
+      admKpi("Listas finalizadas", `${A.fin}/${A.listas}`, A.durMed ? `Tempo médio ${fmtDur(A.durMed)}` : A.listas ? "Nenhuma finalizada ainda" : "Sem entregas no período")));
     const grid = el("div", { class: "adm-grid" });
     grid.append(admHojeCard());
     if (mode === "dia") {
@@ -3601,7 +3601,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     }
     // checklist por perfil
     const ids = admPerfOrder(A.perf);
-    grid.append(admCard("Checklist por perfil", admTbl(["Perfil", "Listas", "Marm.", "Nomes", "Entr.", "Canh.", "Div."],
+    grid.append(admCard("Checklist por perfil", admTbl(["Perfil", "Listas", "Marm.", "Entregas", "Concl.", "Canh.", "Div."],
       ids.map(id => { const o = A.perf[id]; return [ckNome(id), o.listas, o.marm, o.nomes, `${o.ent}/${o.nomes}`, o.canh || "–", o.div || "–"]; }),
       ids.length ? ["Total", A.listas, A.marm, A.nomes, `${A.ent}/${A.nomes}`, A.canh || "–", A.div || "–"] : null, ["l", "r", "r", "r", "r", "r", "r"]), "wide",
       el("small", { class: "muted" }, "Canh. = canhotos · Div. = divergências")));
@@ -3637,7 +3637,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       grid.append(admCard(ckNome(d.perfil), el("div", { class: "wrap", style: "gap:12px" },
         el("small", { class: "muted" }, s.txt),
         el("div", { class: "track" }, el("i", { style: `width:${admPct(ent, its.length)}%;background:var(--grad)` })),
-        admTbl(["Nome", "Marm.", "Conf.", "Entr.", "Canhoto"], rows, ["Total", sum(its, x => x.marmitas), `${its.filter(x => x.conferida).length}/${its.length}`, `${ent}/${its.length}`, ""], ["l", "r", "r", "r", "l"])),
+        admTbl(["Entrega", "Marm.", "Conf.", "Entr.", "Canhoto"], rows, ["Total", sum(its, x => x.marmitas), `${its.filter(x => x.conferida).length}/${its.length}`, `${ent}/${its.length}`, ""], ["l", "r", "r", "r", "l"])),
         "", el("span", { class: "pill lg " + s.cls }, s.tag)));
     });
     if (!pm.length && !docs.length) grid.append(admCard("Sem entregas", admEmpty("Nenhuma entrega registrada neste dia."), "wide"));
@@ -3664,7 +3664,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const docs = admCkDocs(), m = monthOf(adm.ref);
     if (!docs.length) { admRepMsg("Não há entregas do checklist neste mês.", true); return; }
     const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const rows = [["Data", "Perfil", "Nome", "Marmitas", "Conferida", "Entregue", "Recebido por", "Qtd conferida", "Hora da confirmação", "Divergência", "Início da entrega", "Fim da entrega", "Duração"]];
+    const rows = [["Data", "Perfil", "Entrega", "Marmitas", "Conferida", "Entregue", "Recebido por", "Qtd conferida", "Hora da confirmação", "Divergência", "Início da entrega", "Fim da entrega", "Duração"]];
     docs.forEach(d => admNamed(d).forEach(x => { const c = x.comprovante;
       rows.push([fmtDate(d.data), ckNome(d.perfil), x.nome.trim(), x.marmitas || 0, x.conferida ? "Sim" : "Não", x.entregue ? "Sim" : "Não",
         c ? c.recebedor : "", c ? c.quantidade : "", c ? hhmm(c.em) : "", c ? (c.divergencia ? "Sim" : "Não") : "",
@@ -3682,14 +3682,14 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const C = k.C, muted = t => ({ t, color: C.mute }), sim = v => v ? { t: "Sim", color: C.green, bold: true } : { t: "Não", color: C.faint };
     k.cards([
       { label: "Marmitas", value: String(A.marm), sub: plural(A.listas, "lista", "listas"), tone: "acc" },
-      { label: "Nomes entregues", value: `${A.ent}/${A.nomes}`, sub: `${admPct(A.ent, A.nomes)}% concluído` },
+      { label: "Entregas concluídas", value: `${A.ent}/${A.nomes}`, sub: `${admPct(A.ent, A.nomes)}% concluído` },
       { label: "Canhotos", value: String(A.canh), sub: A.div ? plural(A.div, "divergência", "divergências") : "sem divergência", tone: A.div ? "red" : "" },
       { label: "Dias com entrega", value: String(new Set(docs.map(d => d.data)).size), sub: monthLabel(m) },
     ]);
 
     k.h2("Resumo por perfil");
     const ids = admPerfOrder(A.perf);
-    k.table({ head: ["Perfil", "Listas", "Marmitas", "Nomes", "Entregues", "Canhotos", "Diverg."], rows: ids.map(id => { const o = A.perf[id];
+    k.table({ head: ["Perfil", "Listas", "Marmitas", "Entregas", "Concluídas", "Canhotos", "Diverg."], rows: ids.map(id => { const o = A.perf[id];
       return [{ t: ckNome(id), bold: true }, o.listas, o.marm, o.nomes, o.ent, o.canh, o.div ? { t: o.div, color: C.red, bold: true } : muted(0)]; }),
       widths: [54, 18, 22, 20, 24, 22, 20], aligns: ["l", "r", "r", "r", "r", "r", "r"], foot: ["Total", A.listas, A.marm, A.nomes, A.ent, A.canh, A.div] });
 
@@ -3697,7 +3697,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     k.table({ head: ["Data", "Perfil", "Marmitas", "Entregues", "Início", "Fim", "Duração"], rows: docs.map(d => { const its = admNamed(d);
       return [`${DIAS3[parse(d.data).getDay()]} ${short(d.data)}`, ckNome(d.perfil), sum(its, x => x.marmitas), `${its.filter(x => x.entregue).length}/${its.length}`,
         muted(admIni(d) ? hhmm(admIni(d)) : "–"), muted(admFim(d) ? hhmm(admFim(d)) : "–"), admFim(d) ? fmtDur(admDurMs(d)) : muted("–")]; }),
-      widths: [24, 52, 22, 24, 18, 18, 24], aligns: ["l", "l", "r", "r", "r", "r", "r"], rowH: 5.8 });
+      widths: [24, 52, 22, 24, 18, 18, 24], aligns: ["l", "l", "r", "r", "r", "r", "r"], rowH: 6.2 });
 
     k.h2("Detalhe das entregas");
     const det = [];
@@ -3709,7 +3709,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
         det.push([x.nome.trim(), x.marmitas || 0, sim(x.conferida), sim(x.entregue),
           c ? { t: `${c.recebedor} · ${hhmm(c.em)}${c.divergencia ? ` · conferiu ${c.quantidade}` : ""}`, color: c.divergencia ? C.red : C.ink } : muted("–")]); });
     });
-    k.table({ head: ["Nome", "Marmitas", "Conf.", "Entr.", "Canhoto"], rows: det, widths: [64, 20, 16, 16, 66], aligns: ["l", "r", "c", "c", "l"], rowH: 5.6, size: 8.6 });
+    k.table({ head: ["Entrega", "Marmitas", "Conf.", "Entr.", "Canhoto"], rows: det, widths: [64, 20, 16, 16, 66], aligns: ["l", "r", "c", "c", "l"], rowH: 6, size: 9.2 });
     admDownload(`relatorio-checklist-${m}.pdf`, k.done(), "application/pdf");
   }
   function renderAdmRel() {
@@ -3726,9 +3726,9 @@ body.adm-viewer .adm-only{display:inline-flex!important}
         el("div", { class: "adm-actions", style: "grid-template-columns:1fr" }, btn("Baixar relatório (PDF)", "primary", admPmPdf, !A.pm.length)),
         el("p", { class: "note", style: "margin:0" }, "O PDF traz o resumo de caixas, os registros com data e hora, e os valores. A tela do painel mostra só quantidades."))),
       admCard("Checklist de entregas", el("div", { class: "rep-card" },
-        el("div", { class: "sum" }, pill(`${A.marm} marmitas`, "rel"), pill(plural(A.nomes, "nome", "nomes")), pill(`${A.ent} entregues`, "ok"), pill(`${A.fin}/${A.listas} finalizadas`)),
+        el("div", { class: "sum" }, pill(`${A.marm} marmitas`, "rel"), pill(plural(A.nomes, "entrega", "entregas")), pill(`${A.ent} entregues`, "ok"), pill(`${A.fin}/${A.listas} finalizadas`)),
         el("div", { class: "adm-actions" }, btn("Baixar relatório (PDF)", "primary", admCkPdf, !A.docs.length), btn("Baixar planilha", "ghost", admCkCsv, !A.docs.length)),
-        el("p", { class: "note", style: "margin:0" }, "Resumo por perfil, entregas por dia com início, fim e duração, e o detalhe de cada nome com o canhoto. O checklist não tem valores."))));
+        el("p", { class: "note", style: "margin:0" }, "Resumo por perfil, entregas por dia com início, fim e duração, e o detalhe de cada entrega com o canhoto. O checklist não tem valores."))));
     body.append(grid, el("div", { class: "status", id: "admRepStatus", role: "status" }));
   }
 
