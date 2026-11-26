@@ -1894,61 +1894,212 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     saveFile(`${fileBase()}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n"));
   };
 
+  // ================= PDF: layout comum (A4, minimalista) =================
+  // Cabeçalho com a marca, cartões de resumo, tabelas em 1 ou 2 colunas e rodapé com página.
+  function pdfKit({ kind, title, meta = [] }) {
+    const { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: "mm", format: "a4" });
+    const M = 14, PW = 210, PH = 297, W = PW - 2 * M, TOP = 24, BOT = PH - 17;
+    const C = { ink: [29, 29, 31], mute: [110, 110, 115], faint: [160, 160, 166], line: [222, 222, 228], rule: [190, 190, 198],
+      fill: [245, 245, 247], acc: [98, 72, 214], accBg: [241, 238, 252], red: [196, 38, 52], redBg: [253, 238, 240], green: [28, 130, 74] };
+    const tc = c => pdf.setTextColor(...c), fc = c => pdf.setFillColor(...c), dc = c => pdf.setDrawColor(...c);
+    const font = (size, bold) => { pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size); };
+    const fit = (s, w) => { s = String(s ?? ""); if (pdf.getTextWidth(s) <= w) return s; while (s.length > 1 && pdf.getTextWidth(s + "…") > w) s = s.slice(0, -1); return s.trimEnd() + "…"; };
+    const k = { pdf, M, W, BOT, C, y: TOP, tc, fc, dc, font, fit };
+
+    // marca: SPLOG/Adonai com o ponto colorido
+    k.logo = (x, y, size, color = C.ink) => {
+      font(size, true); tc(color); const t = "SPLOG/Adonai";
+      pdf.text(t, x, y); const r = size * 0.3528 * 0.1;
+      fc(C.acc); pdf.circle(x + pdf.getTextWidth(t) + r * 1.6, y - r, r, "F");
+      return pdf.getTextWidth(t) + r * 3.2;
+    };
+    const smallHead = () => {
+      k.logo(M, 13, 9);
+      font(8); tc(C.mute); pdf.text(fit(title, W - 50), PW - M, 13, { align: "right" });
+      dc(C.line); pdf.setLineWidth(0.2); pdf.line(M, 16.5, PW - M, 16.5);
+      k.y = TOP;
+    };
+    k.page = () => { pdf.addPage(); smallHead(); };
+    k.ensure = h => { if (k.y + h > BOT) k.page(); };
+
+    // cabeçalho da 1ª página
+    k.logo(M, 17, 14);
+    font(7.5, true); tc(C.mute); pdf.text(kind.toUpperCase(), PW - M, 17, { align: "right" });
+    dc(C.line); pdf.setLineWidth(0.2); pdf.line(M, 21.5, PW - M, 21.5);
+    font(21, true); tc(C.ink); const tl = pdf.splitTextToSize(title, W);
+    pdf.text(tl, M, 33); k.y = 33 + (tl.length - 1) * 8 + 6.5;
+    if (meta.length) {
+      font(9); tc(C.mute);
+      const ml = pdf.splitTextToSize(meta.filter(Boolean).join("     ·     "), W);
+      pdf.text(ml, M, k.y); k.y += ml.length * 4.4;
+    }
+    k.y += 5;
+
+    // cartões de resumo lado a lado
+    k.cards = items => {
+      items = items.filter(Boolean); if (!items.length) return;
+      const gap = 4, n = items.length, w = (W - gap * (n - 1)) / n, h = 21;
+      k.ensure(h + 6);
+      items.forEach((it, i) => {
+        const x = M + i * (w + gap), tone = it.tone === "acc" ? [C.accBg, C.acc] : it.tone === "red" ? [C.redBg, C.red] : [C.fill, C.ink];
+        fc(tone[0]); pdf.roundedRect(x, k.y, w, h, 3, 3, "F");
+        font(7, true); tc(C.mute); pdf.text(fit(it.label.toUpperCase(), w - 8), x + 4, k.y + 6, { charSpace: 0.25 });
+        font(it.value.length > 12 ? 13 : 15.5, true); tc(tone[1]); pdf.text(fit(it.value, w - 8), x + 4, k.y + 13.6);
+        if (it.sub) { font(7.5); tc(C.mute); pdf.text(fit(it.sub, w - 8), x + 4, k.y + 18); }
+      });
+      k.y += h + 8;
+    };
+
+    // título de seção, com texto opcional à direita
+    k.h2 = (t, right) => {
+      k.ensure(22);
+      font(12.5, true); tc(C.ink); pdf.text(t, M, k.y);
+      if (right) { font(9.5, true); tc(C.mute); pdf.text(right, PW - M, k.y, { align: "right" }); }
+      k.y += 6.5;
+    };
+    k.h3 = (t, right, need = 16) => {
+      k.ensure(need);
+      font(9.5, true); tc(C.ink); pdf.text(t, M, k.y);
+      if (right) { font(8.5); tc(C.mute); pdf.text(right, PW - M, k.y, { align: "right" }); }
+      k.y += 4.5;
+    };
+    k.note = (t, color = C.mute) => { k.ensure(8); font(9); tc(color); const l = pdf.splitTextToSize(t, W); pdf.text(l, M, k.y); k.y += l.length * 4.2 + 4; };
+
+    // tabela: widths em proporção; cols: 2 divide as linhas em duas colunas lado a lado.
+    // célula pode ser texto ou { t, color, bold }. sub(row) devolve { t, color } para uma 2ª linha pequena.
+    k.table = ({ head, rows, widths, aligns = [], foot, cols = 1, rowH = 6, sub, size = 9 }) => {
+      const gutter = 8, colW = cols === 2 ? (W - gutter) / 2 : W, tot = widths.reduce((a, b) => a + b, 0);
+      const ws = widths.map(w => w / tot * colW), HEAD = 6.5;
+      const xsAt = x0 => { const xs = []; let a = x0; ws.forEach(w => { xs.push(a); a += w; }); return xs; };
+      const cell = (v, i, xs, yy, bold) => {
+        const o = v && typeof v === "object" ? v : { t: v };
+        font(size, bold || o.bold); tc(o.color || C.ink);
+        const s = fit(o.t ?? "", ws[i] - 3);
+        aligns[i] === "r" ? pdf.text(s, xs[i] + ws[i] - 1.2, yy, { align: "right" }) : aligns[i] === "c" ? pdf.text(s, xs[i] + ws[i] / 2, yy, { align: "center" }) : pdf.text(s, xs[i] + 1.2, yy);
+      };
+      const header = (x0, yy) => {
+        const xs = xsAt(x0); font(7, true); tc(C.mute);
+        head.forEach((h, i) => { const s = h.toUpperCase(); aligns[i] === "r" ? pdf.text(s, xs[i] + ws[i] - 1.2, yy, { align: "right" }) : aligns[i] === "c" ? pdf.text(s, xs[i] + ws[i] / 2, yy, { align: "center" }) : pdf.text(s, xs[i] + 1.2, yy); });
+        dc(C.rule); pdf.setLineWidth(0.25); pdf.line(x0, yy + 2.2, x0 + colW, yy + 2.2);
+      };
+      const hOf = r => r && r.group ? 8 : rowH + (sub && sub(r) ? 3.8 : 0);
+      const drawRow = (r, x0, yy) => {
+        if (r.group) {              // faixa de grupo (ex.: dia e perfil)
+          fc(C.fill); pdf.roundedRect(x0, yy - 3.4, colW, 6.2, 1.5, 1.5, "F");
+          font(8.8, true); tc(C.ink); pdf.text(fit(r.group, colW * 0.6), x0 + 2, yy + 0.8);
+          if (r.right) { font(8); tc(C.mute); pdf.text(r.right, x0 + colW - 2, yy + 0.8, { align: "right" }); }
+          return;
+        }
+        const xs = xsAt(x0); r.forEach((v, i) => cell(v, i, xs, yy));
+        const s = sub && sub(r); if (s) { font(7.2); tc(s.color || C.mute); pdf.text(fit(s.t, colW - 3), xs[0] + 1.2, yy + 3.5); }
+        dc(C.line); pdf.setLineWidth(0.12); pdf.line(x0, yy + hOf(r) - 4, x0 + colW, yy + hOf(r) - 4);
+      };
+      let i = 0, grp = null;
+      const cont = () => i < rows.length && !rows[i].group && grp ? { group: grp.group + "  (continuação)", right: grp.right } : null;
+      k.ensure(HEAD + rowH * 2 + 2);
+      while (i < rows.length) {
+        if (k.y + HEAD + hOf(rows[i]) > BOT) k.page();
+        const y0 = k.y; let yMax = y0;
+        // quantas linhas cabem por coluna nesta página
+        const fits = () => { let h = y0 + HEAD + 2.4 + (cont() ? 8 : 0), n = 0; for (let j = i; j < rows.length; j++) { h += hOf(rows[j]); if (h > BOT + 4) break; n++; } return Math.max(1, n); };
+        const cap = fits(), left = rows.length - i;
+        const per = cols === 2 ? (left <= cap * 2 ? Math.ceil(left / 2) : cap) : cap;
+        for (let c = 0; c < cols && i < rows.length; c++) {
+          const x0 = M + c * (colW + gutter); let yy = y0 + 4.4;
+          header(x0, y0 + 0.6); yy = y0 + HEAD + 2.6;
+          const cg = cont(); if (cg) { drawRow(cg, x0, yy); yy += 8; }
+          for (let n = 0; n < per && i < rows.length; n++, i++) { if (rows[i].group) grp = rows[i]; drawRow(rows[i], x0, yy); yy += hOf(rows[i]); }
+          yMax = Math.max(yMax, yy);
+        }
+        k.y = yMax;
+        if (i < rows.length) k.page();
+      }
+      if (foot) {
+        k.ensure(9);
+        dc(C.ink); pdf.setLineWidth(0.35); pdf.line(M, k.y - 3.6, M + (cols === 2 ? W : colW), k.y - 3.6);
+        if (cols === 2) {           // total em uma faixa: rótulo à esquerda, valores à direita
+          font(size, true); tc(C.ink); pdf.text(String(foot[0]), M + 1.2, k.y + 0.6);
+          pdf.text(foot.slice(1).filter(v => v !== "" && v != null).join("     "), M + W - 1.2, k.y + 0.6, { align: "right" });
+        } else { const xs = xsAt(M); foot.forEach((v, j) => cell(v, j, xs, k.y + 0.6, true)); }
+        k.y += 6;
+      }
+      k.y += 6;
+    };
+
+    // destaque final (ex.: total a receber)
+    k.total = (label, value) => {
+      k.ensure(18);
+      fc(C.accBg); pdf.roundedRect(M, k.y, W, 14, 3, 3, "F");
+      font(10.5, true); tc(C.ink); pdf.text(label, M + 5, k.y + 8.8);
+      font(15, true); tc(C.acc); pdf.text(value, PW - M - 5, k.y + 9.2, { align: "right" });
+      k.y += 20;
+    };
+
+    // rodapé em todas as páginas e o arquivo pronto
+    k.done = () => {
+      const n = pdf.getNumberOfPages(), now = new Date(), em = `Emitido em ${fmtDate(todayIso())} às ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      for (let p = 1; p <= n; p++) {
+        pdf.setPage(p);
+        dc(C.line); pdf.setLineWidth(0.2); pdf.line(M, PH - 12, PW - M, PH - 12);
+        font(7.5); tc(C.faint);
+        pdf.text(`SPLOG/Adonai  ·  ${em}`, M, PH - 7.5);
+        pdf.text(`Página ${p} de ${n}`, PW - M, PH - 7.5, { align: "right" });
+      }
+      return pdf.output("arraybuffer");
+    };
+    return k;
+  }
+
   const repPdf = () => {
     if (!window.jspdf) { setStatus("repStatus", "O gerador de PDF não carregou. Verifique a conexão e recarregue.", true); return; }
     const R = reportData();
     if (!R.pm.length && !R.ot.length) { setStatus("repStatus", `Não há entregas${SCOPES[state.repScope] ? " de " + SCOPES[state.repScope] : ""} neste mês para gerar o PDF.`, true); return; }
-    const { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: "mm", format: "a4" });
-    const L = 18, W = 210 - 36; let y = 22;
-    const ensure = h => { if (y + h > 280) { pdf.addPage(); y = 20; } };
-    pdf.setFont("helvetica", "bold"); pdf.setFontSize(16); pdf.text(`${scopeTitle().replace(" · ", " - ")} - ${monthLabel(state.month)}`, L, y); y += 8;
-    pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(90);
-    if (state.cfg.cliente) { pdf.text(`Cliente: ${state.cfg.cliente}`, L, y); y += 5; }
-    if (state.cfg.prestador) { pdf.text(`Prestador: ${state.cfg.prestador}`, L, y); y += 5; }
-    pdf.text(`Período: ${periodo()}`, L, y); y += 5;
-    pdf.text(`Emitido em ${fmtDate(todayIso())}`, L, y); y += 9; pdf.setTextColor(0);
+    const k = pdfKit({ kind: "Relatório mensal", title: `${SCOPES[state.repScope] || "Relatório de entregas"} · ${monthLabel(state.month)}`,
+      meta: [state.cfg.cliente && `Cliente: ${state.cfg.cliente}`, state.cfg.prestador && `Prestador: ${state.cfg.prestador}`, `Período: ${periodo()}`] });
+    const muted = t => ({ t, color: k.C.mute });
 
-    const table = (head, rows, foot, widths, aligns) => {
-      const xs = []; let acc = L; widths.forEach(w => { xs.push(acc); acc += w; });
-      const cell = (txt, i) => { const s = String(txt); if (aligns[i] === "r") pdf.text(s, xs[i] + widths[i] - 1.5, y, { align: "right" }); else pdf.text(s, xs[i] + 1.5, y); };
-      const header = () => { pdf.setFillColor(232, 238, 234); pdf.rect(L, y - 4.5, W, 7, "F"); pdf.setFont("helvetica", "bold"); pdf.setFontSize(9); head.forEach(cell); y += 7; pdf.setFont("helvetica", "normal"); pdf.setFontSize(9.5); };
-      ensure(14); header();
-      rows.forEach(r => { if (y + 7 > 280) { pdf.addPage(); y = 20; header(); } r.forEach(cell); pdf.setDrawColor(225); pdf.line(L, y + 2, L + W, y + 2); y += 6.5; });
-      if (foot) { ensure(8); pdf.setDrawColor(0); pdf.setLineWidth(0.5); pdf.line(L, y - 3.5, L + W, y - 3.5); pdf.setLineWidth(0.2); pdf.setFont("helvetica", "bold"); foot.forEach(cell); y += 9; pdf.setFont("helvetica", "normal"); }
-    };
-    const heading = (t, size = 12) => { ensure(16); pdf.setFont("helvetica", "bold"); pdf.setFontSize(size); pdf.text(t, L, y); y += 6.5; };
-    const sub = t => { ensure(12); pdf.setFont("helvetica", "bold"); pdf.setFontSize(9); pdf.setTextColor(90); pdf.text(t.toUpperCase(), L, y); pdf.setTextColor(0); y += 5; };
-    const SUMW = [84, 22, 34, 34], SUMA = ["l", "r", "r", "r"];
+    k.cards([
+      { label: "Total a receber", value: BRL(R.total), sub: R.paidTotal ? `Já recebido ${BRL(R.paidTotal)}` : "Valor do mês", tone: "acc" },
+      R.showPM && { label: "Caixas PM", value: String(R.G + R.M), sub: `G ${R.G}  ·  M ${R.M}` },
+      R.showPM && { label: "Posto da Mata", value: BRL(R.pmTotal), sub: plural(R.pm.length, "registro", "registros") },
+      R.showOT && { label: "Pedreira e outras", value: BRL(R.otTotal), sub: plural(R.ot.length, "entrega", "entregas") },
+    ]);
 
     if (R.showPM) {
-    heading("Posto da Mata");
-    if (R.pm.length) {
-      table(["Item", "Qtd", "Unitário", "Subtotal"], R.pmItems.map(i => [i.label, i.qtd, BRL(i.unit), BRL(i.qtd * i.unit)]), ["Subtotal PM", "", "", BRL(R.pmTotal)], SUMW, SUMA);
-      sub("Registros");
-      table(["Data", "Hora", "G", "M", "Valor"], R.pm.map(e => [dayLbl(e.data), e.hora || "-", e.g || "-", e.m || "-", BRL(e.valor)]),
-        ["Total", "", R.G, R.M, BRL(R.pmTotal)], [44, 30, 30, 30, 40], ["l", "l", "r", "r", "r"]);
-    } else { pdf.setFontSize(10); pdf.text("Nenhuma caixa neste mês.", L, y); y += 9; }
+      k.h2("Posto da Mata", BRL(R.pmTotal));
+      if (R.pm.length) {
+        k.table({ head: ["Item", "Qtd", "Unitário", "Subtotal"], rows: R.pmItems.map(i => [i.label, i.qtd, muted(BRL(i.unit)), BRL(i.qtd * i.unit)]),
+          widths: [96, 22, 32, 32], aligns: ["l", "r", "r", "r"], foot: ["Subtotal PM", R.G + R.M, "", BRL(R.pmTotal)] });
+        k.h3("Registros do mês", plural(R.pm.length, "registro", "registros"));
+        k.table({ cols: 2, head: ["Data", "Hora", "G", "M", "Valor"], rows: R.pm.map(e => [dayLbl(e.data), muted(e.hora || "–"), e.g || "–", e.m || "–", BRL(e.valor)]),
+          widths: [24, 14, 10, 10, 24], aligns: ["l", "l", "r", "r", "r"], foot: ["Total do mês", `G ${R.G}`, `M ${R.M}`, BRL(R.pmTotal)] });
+      } else k.note("Nenhuma caixa neste mês.");
     }
 
     if (R.showOT) {
-    heading("Pedreira e outras entregas");
-    if (R.ot.length) {
-      table(["Item", "Qtd", "Unitário", "Subtotal"], R.otItems.map(i => [i.label, i.qtd, BRL(i.unit), BRL(i.qtd * i.unit)]), ["Subtotal", "", "", BRL(R.otTotal)], SUMW, SUMA);
-      sub("Registros");
-      table(["Data", "Hora", "Entrega", "Valor"], R.ot.map(e => [dayLbl(e.data), e.hora || "-", otLabel(e), BRL(e.valor)]),
-        ["Total", "", plural(R.ot.length, "entrega", "entregas"), BRL(R.otTotal)], [32, 22, 80, 40], ["l", "l", "l", "r"]);
-    } else { pdf.setFontSize(10); pdf.text("Nenhuma entrega a cobrar neste mês.", L, y); y += 9; }
-
-    if (R.weeks.length) { sub("Pagamento por semana");
-      table(["Semana", "Entregas", "Valor", "Situação"], R.weeks.map(w => [wkLabel(w), w.n, BRL(w.valor), w.pago ? "Paga" : "A receber"]), null, [64, 30, 40, 40], ["l", "r", "r", "r"]); y += 3; }
+      k.h2("Pedreira e outras entregas", BRL(R.otTotal));
+      if (R.ot.length) {
+        k.table({ head: ["Item", "Qtd", "Unitário", "Subtotal"], rows: R.otItems.map(i => [i.label, i.qtd, muted(BRL(i.unit)), BRL(i.qtd * i.unit)]),
+          widths: [96, 22, 32, 32], aligns: ["l", "r", "r", "r"], foot: ["Subtotal", R.ot.length, "", BRL(R.otTotal)] });
+        k.h3("Registros do mês", plural(R.ot.length, "entrega", "entregas"));
+        k.table({ cols: 2, head: ["Data", "Hora", "Entrega", "Valor"], rows: R.ot.map(e => [dayLbl(e.data), muted(e.hora || "–"), otLabel(e), BRL(e.valor)]),
+          widths: [22, 12, 32, 20], aligns: ["l", "l", "l", "r"], foot: ["Total do mês", plural(R.ot.length, "entrega", "entregas"), BRL(R.otTotal)] });
+      } else k.note("Nenhuma entrega a cobrar neste mês.");
+      if (R.weeks.length) {
+        k.h3("Pagamento por semana");
+        k.table({ head: ["Semana", "Entregas", "Valor", "Situação"], rows: R.weeks.map(w => [wkLabel(w), w.n, BRL(w.valor), w.pago ? { t: "Paga", color: k.C.green, bold: true } : muted("A receber")]),
+          widths: [76, 30, 38, 38], aligns: ["l", "r", "r", "r"] });
+      }
     }
-    heading("Total a receber");
+
+    k.h2("Resumo");
     const tRows = [];
     if (R.showPM) tRows.push(["Posto da Mata", BRL(R.pmTotal)]);
     if (R.showOT) tRows.push(["Pedreira e outras entregas", BRL(R.otTotal)]);
-    if (R.paidTotal) tRows.push(["Já recebido (semanas pagas)", "- " + BRL(R.paidTotal)]);
-    table(["Seção", "Valor"], tRows, ["Total a receber", BRL(R.total)], [134, 40], ["l", "r"]);
-    saveFile(`${fileBase()}.pdf`, pdf.output("arraybuffer"));
+    if (R.paidTotal) tRows.push(["Já recebido (semanas pagas)", { t: "- " + BRL(R.paidTotal), color: k.C.green }]);
+    k.table({ head: ["Seção", "Valor"], rows: tRows, widths: [140, 42], aligns: ["l", "r"] });
+    k.y -= 2; k.total("Total a receber", BRL(R.total));
+    saveFile(`${fileBase()}.pdf`, k.done());
   };
   $("pdfBtn").onclick = repPdf;
 
@@ -2963,45 +3114,25 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     if (!window.jspdf) { setStatus("ckStatus", "O gerador de PDF não carregou. Verifique a conexão e recarregue.", true); return; }
     const linhas = ckLinhas();
     if (!linhas.length) { setStatus("ckStatus", "Adicione nomes antes de baixar o relatório.", true); return; }
-    const { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: "mm", format: "a4" });
-    const day = state.ck.day, nome = ckNome(state.ck.perfil), L = 18, W = 174;
-    let y = 22;
-    pdf.setFont("helvetica", "bold"); pdf.setFontSize(16); pdf.text(`Entregas · ${nome}`, L, y); y += 8;
-    pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(90);
-    pdf.text(`Data: ${fmtDate(day)} (${DOWL[parse(day).getDay()]})`, L, y); y += 5;
-    pdf.text(`Emitido em ${fmtDate(todayIso())}`, L, y); y += 5;
-    if (ckIni()) {
-      pdf.text(`Início: ${hhmm(ckIni())}${ckFim() ? `  ·  Fim: ${hhmm(ckFim())}  ·  Duração: ${ckDur()}` : "  ·  entrega em andamento"}`, L, y); y += 5;
-    }
-    y += 4; pdf.setTextColor(0);
-    const cols = [["Nome", L + 2, "l"], ["Marmitas", L + 112, "c"], ["Conferida", L + 138, "c"], ["Entregue", L + 164, "c"]];
-    const header = () => {
-      pdf.setFillColor(232, 238, 234); pdf.rect(L, y - 4.5, W, 7, "F");
-      pdf.setFont("helvetica", "bold"); pdf.setFontSize(9);
-      cols.forEach(([t, x, a]) => pdf.text(t, a === "c" ? x : x, y, a === "c" ? { align: "center" } : undefined));
-      y += 7; pdf.setFont("helvetica", "normal"); pdf.setFontSize(10);
-    };
-    header();
-    linhas.forEach(r => {
-      if (y > 262) { pdf.addPage(); y = 20; header(); }
-      pdf.text(String(r[0]), cols[0][1], y);
-      pdf.text(String(r[1]), L + 112, y, { align: "center" });
-      pdf.text(r[2], L + 138, y, { align: "center" });
-      pdf.text(r[3], L + 164, y, { align: "center" });
-      let h = 6.5;
-      if (r[4]) {     // canhoto: quem recebeu, quanto conferiu e a que horas
-        pdf.setFontSize(8); r[7] ? pdf.setTextColor(200, 30, 50) : pdf.setTextColor(90);
-        pdf.text(`Canhoto: recebido por ${r[4]} às ${r[6]} · conferiu ${r[5]}${r[7] ? " (DIVERGENTE DO PEDIDO)" : ""}`, cols[0][1], y + 4);
-        pdf.setTextColor(0); pdf.setFontSize(10); h = 10.5;
-      }
-      pdf.setDrawColor(225); pdf.line(L, y + h - 4.5, L + W, y + h - 4.5); y += h;
-    });
+    const day = state.ck.day, nome = ckNome(state.ck.perfil);
     const tot = sum(linhas, r => r[1]), ent = linhas.filter(r => r[3] === "Sim").length, conf = linhas.filter(r => r[2] === "Sim").length;
-    y += 3; pdf.setDrawColor(0); pdf.setLineWidth(0.5); pdf.line(L, y, L + W, y); y += 6;
-    pdf.setFont("helvetica", "bold"); pdf.setFontSize(11);
-    pdf.text(`Total: ${tot} ${tot === 1 ? "marmita" : "marmitas"}`, L, y);
-    pdf.text(`Conferidas: ${conf}/${linhas.length} · Entregues: ${ent}/${linhas.length}`, L + W, y, { align: "right" });
-    ckDownload(`entregas-${slugOf(nome)}-${day}.pdf`, pdf.output("arraybuffer"), "application/pdf");
+    const canh = linhas.filter(r => r[4]).length, div = linhas.filter(r => r[4] && r[7]).length;
+    const k = pdfKit({ kind: "Checklist do dia", title: `Entregas · ${nome}`,
+      meta: [`${DOWL[parse(day).getDay()]}, ${fmtDate(day)}`, ckIni() ? `Início ${hhmm(ckIni())}` : "Entrega não iniciada", ckIni() && (ckFim() ? `Fim ${hhmm(ckFim())}` : "Em andamento")] });
+    const sim = v => v === "Sim" ? { t: "Sim", color: k.C.green, bold: true } : { t: "Não", color: k.C.faint };
+    k.cards([
+      { label: "Marmitas", value: String(tot), sub: plural(linhas.length, "nome", "nomes"), tone: "acc" },
+      { label: "Conferidas", value: `${conf}/${linhas.length}`, sub: conf === linhas.length ? "Todas conferidas" : `${linhas.length - conf} pendente(s)` },
+      { label: "Entregues", value: `${ent}/${linhas.length}`, sub: ent === linhas.length ? "Todas entregues" : `${linhas.length - ent} pendente(s)` },
+      { label: ckFim() ? "Duração" : "Canhotos", value: ckFim() ? ckDur() : String(canh), sub: ckFim() ? `${hhmm(ckIni())} às ${hhmm(ckFim())}` : (canh ? "com assinatura" : "nenhum"), tone: !ckFim() && div ? "red" : "" },
+    ]);
+    k.h2("Lista de entregas", plural(linhas.length, "nome", "nomes"));
+    k.table({ head: ["Nome", "Marmitas", "Conferida", "Entregue"], rows: linhas.map(r => Object.assign([{ t: r[0], bold: true }, r[1], sim(r[2]), sim(r[3])], { src: r })),
+      widths: [106, 26, 25, 25], aligns: ["l", "r", "c", "c"], rowH: 6.6,
+      sub: ({ src: r }) => r[4] ? { t: `Canhoto: recebido por ${r[4]} às ${r[6]}  ·  conferiu ${r[5]}${r[7] ? "  ·  DIVERGENTE DO PEDIDO" : ""}`, color: r[7] ? k.C.red : k.C.mute } : null,
+      foot: ["Total", tot, `${conf}/${linhas.length}`, `${ent}/${linhas.length}`] });
+    if (div) k.note(`${plural(div, "canhoto", "canhotos")} com quantidade diferente do pedido.`, k.C.red);
+    ckDownload(`entregas-${slugOf(nome)}-${day}.pdf`, k.done(), "application/pdf");
   };
   $("ckCsv").onclick = () => {
     const linhas = ckLinhas();
@@ -3189,36 +3320,37 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     const c = cn.view;
     if (!c) return;
     if (!window.jspdf) { setStatus("cnViewStatus", "O gerador de PDF não carregou. Recarregue a página.", true); return; }
-    const { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: "mm", format: "a4" }), L = 18;
-    let y = 24;
-    pdf.setFont("helvetica", "bold"); pdf.setFontSize(20); pdf.text("Comprovante de entrega", L, y); y += 8;
-    pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(90);
-    pdf.text(`${c.perfilNome} - ${fmtDate(c.data)}`, L, y); y += 12; pdf.setTextColor(0);
-    const when = toIso(c.servidor) || c.criadoEm, dt = new Date(when);
-    const linha = (rot, val, vermelho) => {
-      pdf.setFontSize(9); pdf.setTextColor(110); pdf.text(rot, L, y); y += 5;
-      pdf.setFontSize(13); pdf.setFont("helvetica", "bold"); vermelho ? pdf.setTextColor(200, 30, 50) : pdf.setTextColor(0);
-      pdf.text(String(val), L, y); pdf.setFont("helvetica", "normal"); y += 9;
-    };
-    linha("DESTINATARIO", c.nome);
-    linha("PEDIDO (MARMITAS)", c.pedida);
-    linha("CONFERIDO NA ENTREGA", c.divergencia ? `${c.conferida}  (DIVERGENTE DO PEDIDO)` : c.conferida, c.divergencia);
-    linha("RECEBIDO POR", c.recebedor);
-    linha(toIso(c.servidor) && c.srvOk !== false ? "CONFIRMADO EM (HORARIO DO SERVIDOR)" : "CONFIRMADO EM (HORARIO DO APARELHO)", `${fmtDate(iso(dt))} as ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`);
-    pdf.setFontSize(9); pdf.setTextColor(110); pdf.text("ASSINATURA DE QUEM RECEBEU", L, y); y += 3;
-    try { pdf.addImage(c.assinatura, "PNG", L, y, 72, 24); } catch {}
-    pdf.setDrawColor(200); pdf.rect(L, y, 72, 24); y += 32;
+    const when = toIso(c.servidor) || c.criadoEm, dt = new Date(when), srv = toIso(c.servidor) && c.srvOk !== false;
+    const k = pdfKit({ kind: "Comprovante de entrega", title: c.nome, meta: [`${c.perfilNome}`, fmtDate(c.data)] });
+    const { pdf, M, W, C } = k;
+    k.cards([
+      { label: "Pedido", value: String(c.pedida), sub: "marmitas" },
+      { label: "Conferido na entrega", value: String(c.conferida), sub: c.divergencia ? "Divergente do pedido" : "Confere com o pedido", tone: c.divergencia ? "red" : "acc" },
+      { label: "Confirmado em", value: `${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`, sub: `${fmtDate(iso(dt))} · ${srv ? "horário do servidor" : "horário do aparelho"}` },
+    ]);
+    k.table({ head: ["Informação", "Registro"], widths: [60, 122], aligns: ["l", "l"], rowH: 7,
+      rows: [["Destinatário", { t: c.nome, bold: true }], ["Entrega", `${c.perfilNome} · ${fmtDate(c.data)}`], ["Recebido por", { t: c.recebedor, bold: true }],
+        ["Quantidade conferida", c.divergencia ? { t: `${c.conferida} (pedido: ${c.pedida}) · DIVERGENTE`, color: C.red, bold: true } : `${c.conferida} de ${c.pedida}`],
+        ["Confirmação", `${fmtDate(iso(dt))} às ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())} (${srv ? "servidor" : "aparelho"})`]] });
+    // assinatura e foto lado a lado
+    const gw = (W - 6) / 2, fw = c.foto ? gw : 0, fh = c.foto ? Math.min(110, fw * (c.fotoW && c.fotoH ? c.fotoH / c.fotoW : 0.75)) : 0, bh = Math.max(46, fh + 10);
+    k.ensure(bh + 6);
+    const box = (x, w, label) => { k.fc(C.fill); pdf.roundedRect(x, k.y, w, bh, 3, 3, "F"); k.font(7, true); k.tc(C.mute); pdf.text(label, x + 4, k.y + 6, { charSpace: 0.25 }); };
+    box(M, gw, "ASSINATURA DE QUEM RECEBEU");
+    const sw = gw - 12, sh = Math.min(sw / 3, bh - 22);
+    k.fc([255, 255, 255]); pdf.roundedRect(M + 6, k.y + 10, sw, sh, 2, 2, "F");
+    try { pdf.addImage(c.assinatura, "PNG", M + 6, k.y + 10, sw, sh); } catch {}
+    k.dc(C.rule); pdf.setLineWidth(0.2); pdf.line(M + 10, k.y + 12 + sh, M + gw - 10, k.y + 12 + sh);
+    k.font(8); k.tc(C.mute); pdf.text(k.fit(c.recebedor, gw - 12), M + gw / 2, k.y + 16.5 + sh, { align: "center" });
     if (c.foto) {
-      const w = 80, h = c.fotoW && c.fotoH ? w * c.fotoH / c.fotoW : 60;
-      if (y + h + 24 > 285) { pdf.addPage(); y = 24; }
-      pdf.setTextColor(110); pdf.text("FOTO DAS CAIXAS", L, y); y += 3;
-      try { pdf.addImage(c.foto, "JPEG", L, y, w, h); } catch {}
-      y += h + 8;
+      const x = M + gw + 6; box(x, gw, "FOTO DAS CAIXAS");
+      const iw = Math.min(gw - 8, (bh - 10) * (c.fotoW && c.fotoH ? c.fotoW / c.fotoH : 4 / 3)), ih = iw * (c.fotoW && c.fotoH ? c.fotoH / c.fotoW : 0.75);
+      try { pdf.addImage(c.foto, "JPEG", x + (gw - iw) / 2, k.y + 8, iw, ih); } catch {}
     }
-    pdf.setFontSize(8); pdf.setTextColor(130);
-    pdf.text(c.srvOk !== false ? "Confirmação registrada no app SPLOG, com o horário do servidor no momento da assinatura." : "Confirmação registrada no app SPLOG.", L, 281);
-    pdf.text(`Registro: ${cn.viewId}`, L, 285.5);
-    ckDownload(`comprovante-${slugOf(c.nome)}-${c.data}.pdf`, pdf.output("arraybuffer"), "application/pdf");
+    k.y += bh + 8;
+    k.note(srv ? "Confirmação registrada no app SPLOG/Adonai, com o horário do servidor no momento da assinatura." : "Confirmação registrada no app SPLOG/Adonai.", C.mute);
+    k.y -= 2; k.font(7.5); k.tc(C.faint); pdf.text(`Registro: ${cn.viewId}`, M, k.y);
+    ckDownload(`comprovante-${slugOf(c.nome)}-${c.data}.pdf`, k.done(), "application/pdf");
     setStatus("cnViewStatus", "Comprovante baixado.");
   };
 
@@ -3543,47 +3675,42 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     if (!window.jspdf) { admRepMsg("O gerador de PDF não carregou. Verifique a conexão e recarregue.", true); return; }
     const docs = admCkDocs(), m = monthOf(adm.ref), a = `${m}-01`, b = `${m}-${pad(daysIn(m))}`;
     if (!docs.length) { admRepMsg("Não há entregas do checklist neste mês para gerar o PDF.", true); return; }
-    const A = admAgg(a, b), { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: "mm", format: "a4" }), L = 18, W = 174;
-    let y = 22;
-    const ensure = h => { if (y + h > 282) { pdf.addPage(); y = 20; } };
-    const cut = (s, n) => { s = String(s); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
-    const table = (head, rows, widths, aligns, foot) => {
-      const xs = []; let acc = L; widths.forEach(w => { xs.push(acc); acc += w; });
-      const cell = (t, i) => { const s = String(t); aligns[i] === "r" ? pdf.text(s, xs[i] + widths[i] - 1.5, y, { align: "right" }) : pdf.text(s, xs[i] + 1.5, y); };
-      const header = () => { pdf.setFillColor(236, 233, 247); pdf.rect(L, y - 4.5, W, 7, "F"); pdf.setFont("helvetica", "bold"); pdf.setFontSize(8.5); head.forEach(cell); y += 7; pdf.setFont("helvetica", "normal"); pdf.setFontSize(9); };
-      ensure(16); header();
-      rows.forEach(r => { if (y > 276) { pdf.addPage(); y = 20; header(); } r.forEach(cell); pdf.setDrawColor(225); pdf.line(L, y + 2, L + W, y + 2); y += 6.2; });
-      if (foot) { ensure(8); pdf.setDrawColor(0); pdf.setLineWidth(0.4); pdf.line(L, y - 3.4, L + W, y - 3.4); pdf.setLineWidth(0.2); pdf.setFont("helvetica", "bold"); foot.forEach(cell); pdf.setFont("helvetica", "normal"); y += 8; }
-    };
-    const h2 = t => { ensure(14); pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.text(t, L, y); y += 6.5; pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); };
-    pdf.setFont("helvetica", "bold"); pdf.setFontSize(16); pdf.text(`Relatório de entregas - Checklist - ${monthLabel(m)}`, L, y); y += 8;
-    pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(90);
-    if (state.cfg.cliente) { pdf.text(`Cliente: ${state.cfg.cliente}`, L, y); y += 5; }
-    if (state.cfg.prestador) { pdf.text(`Prestador: ${state.cfg.prestador}`, L, y); y += 5; }
-    pdf.text(`Período: 01/${m.slice(5)}/${m.slice(0, 4)} a ${pad(daysIn(m))}/${m.slice(5)}/${m.slice(0, 4)}`, L, y); y += 5;
-    pdf.text(`Emitido em ${fmtDate(todayIso())}`, L, y); y += 9; pdf.setTextColor(0); pdf.setFontSize(9);
+    const A = admAgg(a, b);
+    const k = pdfKit({ kind: "Relatório mensal", title: `Checklist de entregas · ${monthLabel(m)}`,
+      meta: [state.cfg.cliente && `Cliente: ${state.cfg.cliente}`, state.cfg.prestador && `Prestador: ${state.cfg.prestador}`,
+        `Período: 01/${m.slice(5)}/${m.slice(0, 4)} a ${pad(daysIn(m))}/${m.slice(5)}/${m.slice(0, 4)}`] });
+    const C = k.C, muted = t => ({ t, color: C.mute }), sim = v => v ? { t: "Sim", color: C.green, bold: true } : { t: "Não", color: C.faint };
+    k.cards([
+      { label: "Marmitas", value: String(A.marm), sub: plural(A.listas, "lista", "listas"), tone: "acc" },
+      { label: "Nomes entregues", value: `${A.ent}/${A.nomes}`, sub: `${admPct(A.ent, A.nomes)}% concluído` },
+      { label: "Canhotos", value: String(A.canh), sub: A.div ? plural(A.div, "divergência", "divergências") : "sem divergência", tone: A.div ? "red" : "" },
+      { label: "Dias com entrega", value: String(new Set(docs.map(d => d.data)).size), sub: monthLabel(m) },
+    ]);
 
-    h2("Resumo por perfil");
+    k.h2("Resumo por perfil");
     const ids = admPerfOrder(A.perf);
-    table(["Perfil", "Listas", "Marmitas", "Nomes", "Entregues", "Canhotos", "Diverg."], ids.map(id => { const o = A.perf[id]; return [cut(ckNome(id), 28), o.listas, o.marm, o.nomes, o.ent, o.canh, o.div]; }),
-      [50, 18, 24, 22, 24, 20, 16], ["l", "r", "r", "r", "r", "r", "r"], ["Total", A.listas, A.marm, A.nomes, A.ent, A.canh, A.div]);
+    k.table({ head: ["Perfil", "Listas", "Marmitas", "Nomes", "Entregues", "Canhotos", "Diverg."], rows: ids.map(id => { const o = A.perf[id];
+      return [{ t: ckNome(id), bold: true }, o.listas, o.marm, o.nomes, o.ent, o.canh, o.div ? { t: o.div, color: C.red, bold: true } : muted(0)]; }),
+      widths: [54, 18, 22, 20, 24, 22, 20], aligns: ["l", "r", "r", "r", "r", "r", "r"], foot: ["Total", A.listas, A.marm, A.nomes, A.ent, A.canh, A.div] });
 
-    h2("Entregas por dia");
-    table(["Data", "Perfil", "Marmitas", "Entregues", "Início", "Fim", "Duração"], docs.map(d => { const its = admNamed(d);
-      return [`${DIAS3[parse(d.data).getDay()]} ${short(d.data)}`, cut(ckNome(d.perfil), 24), sum(its, x => x.marmitas), `${its.filter(x => x.entregue).length}/${its.length}`,
-        admIni(d) ? hhmm(admIni(d)) : "–", admFim(d) ? hhmm(admFim(d)) : "–", admFim(d) ? fmtDur(admDurMs(d)) : "–"]; }),
-      [26, 44, 22, 26, 16, 16, 24], ["l", "l", "r", "r", "r", "r", "r"]);
+    k.h2("Entregas por dia", plural(docs.length, "lista", "listas"));
+    k.table({ head: ["Data", "Perfil", "Marmitas", "Entregues", "Início", "Fim", "Duração"], rows: docs.map(d => { const its = admNamed(d);
+      return [`${DIAS3[parse(d.data).getDay()]} ${short(d.data)}`, ckNome(d.perfil), sum(its, x => x.marmitas), `${its.filter(x => x.entregue).length}/${its.length}`,
+        muted(admIni(d) ? hhmm(admIni(d)) : "–"), muted(admFim(d) ? hhmm(admFim(d)) : "–"), admFim(d) ? fmtDur(admDurMs(d)) : muted("–")]; }),
+      widths: [24, 52, 22, 24, 18, 18, 24], aligns: ["l", "l", "r", "r", "r", "r", "r"], rowH: 5.8 });
 
-    h2("Detalhe das entregas");
+    k.h2("Detalhe das entregas");
+    const det = [];
     docs.forEach(d => {
-      ensure(24); pdf.setFont("helvetica", "bold"); pdf.setFontSize(9.5); pdf.text(`${DIAS3[parse(d.data).getDay()]} ${fmtDate(d.data)} · ${ckNome(d.perfil)}`, L, y); y += 5.5; pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
-      const its = admNamed(d);
-      table(["Nome", "Marmitas", "Conf.", "Entr.", "Canhoto"], its.map(x => { const c = x.comprovante;
-        return [cut(x.nome.trim(), 34), x.marmitas || 0, x.conferida ? "Sim" : "Não", x.entregue ? "Sim" : "Não",
-          c ? cut(`${c.recebedor} ${hhmm(c.em)}${c.divergencia ? ` | conferiu ${c.quantidade}` : ""}`, 34) : "-"]; }),
-        [62, 22, 16, 16, 58], ["l", "r", "r", "r", "l"], ["Total", sum(its, x => x.marmitas), "", "", ""]);
+      const its = admNamed(d), ini = admIni(d), fim = admFim(d);
+      det.push({ group: `${DIAS3[parse(d.data).getDay()]} ${fmtDate(d.data)}  ·  ${ckNome(d.perfil)}`,
+        right: [plural(sum(its, x => x.marmitas), "marmita", "marmitas"), ini ? `${hhmm(ini)}${fim ? ` às ${hhmm(fim)}` : " (em andamento)"}` : ""].filter(Boolean).join("  ·  ") });
+      its.forEach(x => { const c = x.comprovante;
+        det.push([x.nome.trim(), x.marmitas || 0, sim(x.conferida), sim(x.entregue),
+          c ? { t: `${c.recebedor} · ${hhmm(c.em)}${c.divergencia ? ` · conferiu ${c.quantidade}` : ""}`, color: c.divergencia ? C.red : C.ink } : muted("–")]); });
     });
-    admDownload(`relatorio-checklist-${m}.pdf`, pdf.output("arraybuffer"), "application/pdf");
+    k.table({ head: ["Nome", "Marmitas", "Conf.", "Entr.", "Canhoto"], rows: det, widths: [64, 20, 16, 16, 66], aligns: ["l", "r", "c", "c", "l"], rowH: 5.6, size: 8.6 });
+    admDownload(`relatorio-checklist-${m}.pdf`, k.done(), "application/pdf");
   }
   function renderAdmRel() {
     admHead("adm-rel");
