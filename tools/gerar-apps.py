@@ -10,7 +10,7 @@ import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
-BASE = "https://eusoujoaoneto.github.io/entregas/"
+BASE = "https://splogadonai.github.io/entregas/"
 
 
 def rep(s, a, b, count=None):
