@@ -595,6 +595,8 @@ nav.views a[aria-current="page"] svg{filter:drop-shadow(0 4px 8px rgba(124,58,23
 .cksub.div{color:var(--danger);font-weight:500}
 .cksub.need{color:var(--warn)}
 .cksub .linkbtn{font-size:12.5px;padding:2px 0;font-weight:500}
+.cksub .cnbtn{border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;margin:4px 0;cursor:pointer}
+.cksub .cnbtn:active{transform:scale(.96)}
 .ckrow input[readonly]{opacity:.75}
 .ckrow .x:disabled{opacity:.3;cursor:default}
 .sheet-back{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,6,24,.58);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
@@ -975,7 +977,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       </div>
       <div class="status" id="ckStatus" role="status"></div>
     </section>
-    <small class="muted" style="text-align:center">Arraste pela alça <b>⋮⋮</b> para mudar a ordem. Marque <b>Conf.</b> quando conferir e <b>Entr.</b> quando entregar: depois de marcadas, as caixas não desmarcam. Nas entregas com <b>✍ canhoto</b> (como a Habix), <b>Entr.</b> abre a assinatura de quem recebeu.</small>
+    <small class="muted" style="text-align:center">Arraste pela alça <b>⋮⋮</b> para mudar a ordem. Marque <b>Conf.</b> quando conferir e <b>Entr.</b> quando entregar: depois de marcadas, as caixas não desmarcam. Nas entregas com <b>✍ canhoto</b> (como a Habix), depois de iniciar a entrega toque em <b>Colher canhoto</b> (ou em <b>Entr.</b>) para pegar a assinatura de quem recebeu.</small>
   </section>
 
   <!-- ===================== CUSTOS ===================== -->
@@ -3032,9 +3034,16 @@ body.adm-viewer .adm-only{display:inline-flex!important}
           el("button", { type: "button", class: "linkbtn", onclick: () => cnView(c.id) }, "Ver comprovante"));
       } else if (it.canhoto) {
         sub.classList.add("need");
-        sub.append(el("span", { class: "t" }, it.entregue ? "✍ Entregue sem canhoto" : "✍ Canhoto: toque em Entr. para colher a assinatura"),
-          it.entregue ? el("button", { type: "button", class: "linkbtn", onclick: () => cnOpen(it.id) }, "Colher canhoto agora")
-            : el("button", { type: "button", class: "linkbtn", onclick: () => { it.canhoto = false; ckChange(true); fillSub(); } }, "Remover"));
+        const colher = label => el("button", { type: "button", class: "cnbtn", onclick: () => cnOpen(it.id) }, label);
+        if (it.entregue) {
+          sub.append(el("span", { class: "t" }, "✍ Entregue sem canhoto"), colher("Colher canhoto agora"));
+        } else {
+          // o aviso diz o que falta: iniciar a entrega ou já colher a assinatura
+          const texto = iniciada ? "✍ Canhoto pendente" : !it.conferida ? "✍ Canhoto: marque Conf. e inicie a entrega para colher a assinatura" : "✍ Canhoto: inicie a entrega para colher a assinatura";
+          sub.append(el("span", { class: "t" }, texto));
+          if (iniciada && !ckTravada()) sub.append(colher("Colher canhoto"));
+          if (!ckTravada()) sub.append(el("button", { type: "button", class: "linkbtn", onclick: () => { it.canhoto = false; ckChange(true); fillSub(); } }, "Remover"));
+        }
       } else {
         sub.append(el("button", { type: "button", class: "linkbtn", onclick: () => { it.canhoto = true; ckChange(true); fillSub(); } }, "+ Exigir canhoto"));
       }
