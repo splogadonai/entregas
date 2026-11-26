@@ -3,7 +3,7 @@
 // abre a cópia guardada e atualiza por trás (a novidade aparece na próxima abertura).
 // Bibliotecas com versão fixa (Firebase, jsPDF, fonte): guardadas no aparelho, abrem na hora.
 // Os dados (Firebase) não passam por aqui.
-const CACHE = "splog-v26";
+const CACHE = "splog-v27";
 const CDN = "splog-cdn-v1";                       // não muda com a versão do app: as URLs já têm versão
 const SHELL = ["./", "./index.html", "./config.js", "./manifest.webmanifest", "./favicon.svg", "./icon-192.png", "./icon-512.png"];
 const LIBS = [
