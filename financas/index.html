@@ -3440,9 +3440,8 @@ body.adm-viewer .adm-only{display:inline-flex!important}
   // ================= ADM ENTREGAS =================
   // Painel só de quantidades (dia, semana, mês). Valores aparecem apenas no PDF do relatório do PM.
   const ADM_MODES = ["dia", "semana", "mes"];
-  Object.assign(state, { adm: { mode: lsGet("adm.mode", "semana"), ref: todayIso(), pm: [], ck: [], hoje: [], loadedPM: false, loadedCK: false, key: "", unsubCk: null, access: [], viewer: false, err: {}, diagOpen: false } });
-  const adm = state.adm;
-  if (!ADM_MODES.includes(adm.mode)) adm.mode = "semana";
+  Object.assign(state, { adm: { mode: "dia", ref: todayIso(), pm: [], ck: [], hoje: [], loadedPM: false, loadedCK: false, key: "", unsubCk: null, access: [], viewer: false, err: {}, diagOpen: false } });
+  const adm = state.adm;                           // o painel sempre abre em Dia · hoje
 
   const admNamed = d => (d.itens || []).filter(x => String(x.nome || "").trim());
   const admIni = d => d.inicioSrv || d.inicio || "";
@@ -3486,7 +3485,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
     return mode === "dia" ? adm.ref === t : mode === "semana" ? weekOf(adm.ref) === weekOf(t) : monthOf(adm.ref) === monthOf(t);
   }
   function admSetRef(r) { adm.ref = r; admSub(); renderAll(); }
-  function admSetMode(m) { adm.mode = m; lsSet("adm.mode", m); renderAll(); }
+  function admSetMode(m) { adm.mode = m; renderAll(); }
   function admHead(tab) {
     const box = $(tab === "adm" ? "admHead" : tab === "adm-entregas" ? "admHeadE" : "admHeadR"); box.textContent = "";
     const lb = admLabel(tab);
@@ -3711,7 +3710,7 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       const m = monthOf(adm.ref), W = monthWeeks(m).map(w => { const x = admAgg(w.s, w.e); return { w, r: [`${short(w.s)} a ${short(w.e)}`, x.caixas, `G ${x.g} · M ${x.m}`, x.marm, `${x.ent}/${x.nomes}`] }; })
         .filter(o => o.r[1] || o.r[3]), rows = W.map(o => o.r);
       // tocar numa semana mostra o painel daquela semana
-      const goWeek = w => () => { adm.mode = "semana"; lsSet("adm.mode", "semana"); admSetRef(w.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      const goWeek = w => () => { adm.mode = "semana"; admSetRef(w.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
       grid.append(admCard("Detalhe por semana", trLinks(admTbl(["Semana", "Caixas PM", "G · M", "Marmitas", "Entregues"], rows,
         rows.length ? ["Mês", A.caixas, `G ${A.g} · M ${A.m}`, A.marm, `${A.ent}/${A.nomes}`] : null, ["l", "r", "r", "r", "r"]), W.map(o => goWeek(o.w))), "wide"));
     }
