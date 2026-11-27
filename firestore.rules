@@ -3,16 +3,19 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
 
+    // E-mail confirmado: impede que alguém crie uma conta com o e-mail de um sócio/ADM antes dele
+    function emailOk() { return signedIn() && request.auth.token.email_verified == true; }
+
     // O usuário logado foi liberado como sócio da conta {uid}?
     function socioDe(uid) {
-      return signedIn() &&
+      return emailOk() &&
         exists(/databases/$(database)/documents/socios/$(request.auth.token.email)) &&
         get(/databases/$(database)/documents/socios/$(request.auth.token.email)).data.owner == uid;
     }
 
     // O usuário logado foi liberado no ADM Entregas da conta {uid}?
     function admDe(uid) {
-      return signedIn() &&
+      return emailOk() &&
         exists(/databases/$(database)/documents/adm/$(request.auth.token.email)) &&
         get(/databases/$(database)/documents/adm/$(request.auth.token.email)).data.owner == uid;
     }

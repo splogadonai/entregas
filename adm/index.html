@@ -4255,6 +4255,12 @@ body.adm-viewer .adm-only{display:inline-flex!important}
       const owner = acc.owner || null, admOwner = acc.admOwner || null;
       // cada pessoa só entra no app que foi liberado para ela
       const deny = async msg => { started = false; try { localStorage.removeItem(ACC); } catch {} $("boot").hidden = true; $("app").hidden = true; $("login").hidden = false; setStatus("lgStatus", msg, true); await auth.signOut(); };
+      // sócio e ADM precisam confirmar o e-mail antes de ver os dados (as regras do banco também exigem)
+      if ((owner || admOwner) && !u.emailVerified) {
+        try { await u.sendEmailVerification(); } catch {}
+        deny("Confirme seu e-mail: enviamos um link para " + email + ". Depois de confirmar, entre de novo.");
+        return;
+      }
       if (APP === "adm" && !admOwner && owner) { deny("Seu acesso não inclui o ADM Entregas. Peça ao responsável para liberar."); return; }
       if (APP !== "adm" && admOwner && !owner) { deny("Esta conta é do ADM Entregas. Abra o link do ADM Entregas para entrar."); return; }
       bootDone(); $("login").hidden = true; $("app").hidden = false;
